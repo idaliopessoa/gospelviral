@@ -131,9 +131,18 @@ export async function runViaCli({
   }
 
   const args = buildArgs(modelId, capabilities);
+  // Strip ANTHROPIC_API_KEY from the child env: when set, the Claude Code
+  // CLI prefers the API key over the OAuth session and exits 1 (without
+  // stderr output) if the key is rejected. The server holds an
+  // intentionally-invalid key during local dev (see .env.local). The CLI
+  // adapter is supposed to ride the user's OAuth/subscription regardless
+  // of what the server's env says.
+  const childEnv = { ...process.env };
+  delete childEnv.ANTHROPIC_API_KEY;
   const child = spawnImpl(binPath, args, {
     stdio: ['pipe', 'pipe', 'pipe'],
     detached: process.platform !== 'win32',
+    env: childEnv,
   });
 
   const detachAbort = attachAbortHandler(child, signal);
