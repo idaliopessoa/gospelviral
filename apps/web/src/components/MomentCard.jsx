@@ -1,5 +1,8 @@
+import { useMemo } from 'react';
 import { BookOpen, Check, ChevronDown, ChevronUp, CircleAlert, Flame, ShieldCheck } from 'lucide-react';
 import { timestampToSeconds } from '../lib/helpers.js';
+import { extractSegmentText } from '../lib/transcript-extract.js';
+import CardTabs from './CardTabs.jsx';
 import CopyAllButton from './CopyAllButton.jsx';
 import CopyButton from './CopyButton.jsx';
 import ScoreBar from './ScoreBar.jsx';
@@ -184,6 +187,146 @@ function TheologyChecklist({ check }) {
   );
 }
 
+function RedesSociaisTabBody({ moment }) {
+  return (
+    <div className="space-y-5">
+      <div>
+        <div
+          className="text-[10px] uppercase tracking-[0.15em] text-stone-400 mb-1.5 flex items-center justify-between"
+          style={{ fontFamily: "'IBM Plex Sans', sans-serif" }}
+        >
+          <span>Legenda do post · {moment.caption?.structure_used}</span>
+          <CopyButton text={moment.caption?.text || ''} label="Copiar" />
+        </div>
+        <div className="bg-stone-50 p-4 rounded-sm border border-stone-200">
+          <p
+            className="text-sm leading-relaxed whitespace-pre-line text-stone-800"
+            style={{ fontFamily: "'IBM Plex Sans', sans-serif" }}
+          >
+            {moment.caption?.text}
+          </p>
+        </div>
+      </div>
+
+      <div>
+        <div
+          className="text-[10px] uppercase tracking-[0.15em] text-stone-400 mb-1.5 flex items-center justify-between"
+          style={{ fontFamily: "'IBM Plex Sans', sans-serif" }}
+        >
+          <span>Hashtags</span>
+          <CopyButton text={moment.hashtags?.all || ''} label="Copiar" />
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {(moment.hashtags?.all || '')
+            .split(' ')
+            .filter(Boolean)
+            .map((tag, i) => (
+              <span
+                key={`${tag}-${i}`}
+                className="text-xs px-2 py-0.5 bg-stone-100 border border-stone-200 rounded-sm text-stone-700"
+                style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+              >
+                {tag}
+              </span>
+            ))}
+        </div>
+      </div>
+
+      <div>
+        <div
+          className="text-[10px] uppercase tracking-[0.15em] text-stone-400 mb-1.5 flex items-center justify-between"
+          style={{ fontFamily: "'IBM Plex Sans', sans-serif" }}
+        >
+          <span>Call to action</span>
+          <CopyButton text={moment.cta?.primary || ''} label="Copiar" />
+        </div>
+        <p
+          className="text-sm font-medium text-stone-900"
+          style={{ fontFamily: "'IBM Plex Sans', sans-serif" }}
+        >
+          {'"'}
+          {moment.cta?.primary}
+          {'"'}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function LegendaVideoTabBody({ segmentText }) {
+  if (!segmentText) {
+    return (
+      <p
+        className="text-sm text-stone-500 italic"
+        style={{ fontFamily: "'IBM Plex Sans', sans-serif" }}
+      >
+        Transcript indisponível para este trecho.
+      </p>
+    );
+  }
+  return (
+    <div className="space-y-2">
+      <div
+        className="text-[10px] uppercase tracking-[0.15em] text-stone-400 mb-1.5 flex items-center justify-between"
+        style={{ fontFamily: "'IBM Plex Sans', sans-serif" }}
+      >
+        <span>Texto falado · sem timecodes</span>
+        <CopyButton text={segmentText} label="Copiar" />
+      </div>
+      <div className="bg-stone-50 p-4 rounded-sm border border-stone-200">
+        <p
+          className="text-sm leading-relaxed text-stone-800"
+          style={{ fontFamily: "'IBM Plex Sans', sans-serif" }}
+        >
+          {segmentText}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function ScoreDetails({ moment, purposeColor }) {
+  return (
+    <details className="group">
+      <summary
+        className="text-[10px] uppercase tracking-[0.15em] text-stone-400 cursor-pointer flex items-center gap-1.5 hover:text-stone-900 transition-colors list-none"
+        style={{ fontFamily: "'IBM Plex Sans', sans-serif" }}
+      >
+        <ChevronDown size={12} className="group-open:hidden" />
+        <ChevronUp size={12} className="hidden group-open:block" />
+        Score breakdown · theological check
+      </summary>
+      <div className="mt-3 space-y-2.5 pt-3 border-t border-stone-200">
+        {SCORE_BARS.map(({ key, label }) => (
+          <ScoreBar
+            key={key}
+            label={label}
+            score={readScore(moment, key)}
+            accent={purposeColor}
+          />
+        ))}
+        <TheologyChecklist check={moment.theological_check} />
+        {moment.viral_reasoning && (
+          <div className="pt-3 mt-3 border-t border-stone-200">
+            <div
+              className="text-[10px] uppercase tracking-[0.15em] text-stone-400 mb-1.5"
+              style={{ fontFamily: "'IBM Plex Sans', sans-serif" }}
+            >
+              Por que viral
+            </div>
+            <p
+              className="text-xs leading-relaxed text-stone-600"
+              style={{ fontFamily: "'IBM Plex Sans', sans-serif" }}
+            >
+              {moment.viral_reasoning}
+            </p>
+          </div>
+        )}
+      </div>
+    </details>
+  );
+}
+
 export default function MomentCard({
   moment,
   videoId,
@@ -192,10 +335,31 @@ export default function MomentCard({
   overlayConfig,
   onVideoConfigChange,
   onSubtitleConfigChange,
+  transcript = '',
+  activeCardTab = 'redes-sociais',
+  onActiveCardTabChange,
   index,
 }) {
   const startSec = timestampToSeconds(moment.timestamp_start);
   const purposeColor = PURPOSE_COLOR[moment.content_purpose] || '#3F3F3F';
+
+  const segmentText = useMemo(
+    () => extractSegmentText(transcript, moment.timestamp_start, moment.timestamp_end),
+    [transcript, moment.timestamp_start, moment.timestamp_end],
+  );
+
+  const tabs = [
+    {
+      id: 'redes-sociais',
+      label: 'Redes Sociais',
+      body: <RedesSociaisTabBody moment={moment} />,
+    },
+    {
+      id: 'legenda-video',
+      label: 'Legenda do Vídeo',
+      body: <LegendaVideoTabBody segmentText={segmentText} />,
+    },
+  ];
 
   return (
     <article className="bg-white border border-stone-200 rounded-sm overflow-hidden">
@@ -247,103 +411,13 @@ export default function MomentCard({
 
           <ScriptureBox scripture={moment.key_scripture} />
 
-          <div>
-            <div
-              className="text-[10px] uppercase tracking-[0.15em] text-stone-400 mb-1.5 flex items-center justify-between"
-              style={{ fontFamily: "'IBM Plex Sans', sans-serif" }}
-            >
-              <span>Legenda do post · {moment.caption?.structure_used}</span>
-              <CopyButton text={moment.caption?.text || ''} label="Copiar" />
-            </div>
-            <div className="bg-stone-50 p-4 rounded-sm border border-stone-200">
-              <p
-                className="text-sm leading-relaxed whitespace-pre-line text-stone-800"
-                style={{ fontFamily: "'IBM Plex Sans', sans-serif" }}
-              >
-                {moment.caption?.text}
-              </p>
-            </div>
-          </div>
+          <CardTabs
+            activeTab={activeCardTab}
+            onActiveTabChange={onActiveCardTabChange}
+            tabs={tabs}
+          />
 
-          <div>
-            <div
-              className="text-[10px] uppercase tracking-[0.15em] text-stone-400 mb-1.5 flex items-center justify-between"
-              style={{ fontFamily: "'IBM Plex Sans', sans-serif" }}
-            >
-              <span>Hashtags</span>
-              <CopyButton text={moment.hashtags?.all || ''} label="Copiar" />
-            </div>
-            <div className="flex flex-wrap gap-1.5">
-              {(moment.hashtags?.all || '')
-                .split(' ')
-                .filter(Boolean)
-                .map((tag, i) => (
-                  <span
-                    key={`${tag}-${i}`}
-                    className="text-xs px-2 py-0.5 bg-stone-100 border border-stone-200 rounded-sm text-stone-700"
-                    style={{ fontFamily: "'IBM Plex Mono', monospace" }}
-                  >
-                    {tag}
-                  </span>
-                ))}
-            </div>
-          </div>
-
-          <div>
-            <div
-              className="text-[10px] uppercase tracking-[0.15em] text-stone-400 mb-1.5 flex items-center justify-between"
-              style={{ fontFamily: "'IBM Plex Sans', sans-serif" }}
-            >
-              <span>Call to action</span>
-              <CopyButton text={moment.cta?.primary || ''} label="Copiar" />
-            </div>
-            <p
-              className="text-sm font-medium text-stone-900"
-              style={{ fontFamily: "'IBM Plex Sans', sans-serif" }}
-            >
-              {'"'}
-              {moment.cta?.primary}
-              {'"'}
-            </p>
-          </div>
-
-          <details className="group">
-            <summary
-              className="text-[10px] uppercase tracking-[0.15em] text-stone-400 cursor-pointer flex items-center gap-1.5 hover:text-stone-900 transition-colors list-none"
-              style={{ fontFamily: "'IBM Plex Sans', sans-serif" }}
-            >
-              <ChevronDown size={12} className="group-open:hidden" />
-              <ChevronUp size={12} className="hidden group-open:block" />
-              Score breakdown · theological check
-            </summary>
-            <div className="mt-3 space-y-2.5 pt-3 border-t border-stone-200">
-              {SCORE_BARS.map(({ key, label }) => (
-                <ScoreBar
-                  key={key}
-                  label={label}
-                  score={readScore(moment, key)}
-                  accent={purposeColor}
-                />
-              ))}
-              <TheologyChecklist check={moment.theological_check} />
-              {moment.viral_reasoning && (
-                <div className="pt-3 mt-3 border-t border-stone-200">
-                  <div
-                    className="text-[10px] uppercase tracking-[0.15em] text-stone-400 mb-1.5"
-                    style={{ fontFamily: "'IBM Plex Sans', sans-serif" }}
-                  >
-                    Por que viral
-                  </div>
-                  <p
-                    className="text-xs leading-relaxed text-stone-600"
-                    style={{ fontFamily: "'IBM Plex Sans', sans-serif" }}
-                  >
-                    {moment.viral_reasoning}
-                  </p>
-                </div>
-              )}
-            </div>
-          </details>
+          <ScoreDetails moment={moment} purposeColor={purposeColor} />
         </div>
       </div>
     </article>
