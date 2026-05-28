@@ -1,6 +1,6 @@
 # TASK_013: Card Tabs — Redes Sociais / Legenda do Vídeo
 timestamp: 2026-05-28T00:00:00Z
-version: 1.1
+version: 1.2
 status: Ready
 owner: unassigned
 confidence: HIGH
@@ -27,8 +27,9 @@ phase: 3
     - `extractSegmentText(transcript: string, startTs: string, endTs: string): string` — deterministic slice of transcript lines whose leading timestamp falls within `[start, end)`, returning text only (timecodes stripped, lines joined with `' '`)
     - Internal `parseTranscriptLines(transcript)` allowed but **not exported** — only `extractSegmentText` is the public surface
   - `apps/web/src/lib/transcript-extract.test.js` — full Vitest suite (cases enumerated in Quality Gates below)
-  - `apps/web/src/components/CardTabs.jsx` — new **stateless / fully controlled** component. Receives the active tab + change callback from above; renders the tab buttons and the active tab body via slot children
-    - Props: `{ activeTab: 'redes-sociais' | 'legenda-video', onActiveTabChange: (tab) => void, children: { 'redes-sociais': ReactNode, 'legenda-video': ReactNode } }`
+  - `apps/web/src/components/CardTabs.jsx` — new **stateless / fully controlled** component. Receives the active tab + change callback from above; renders the tab buttons and the active tab body declared in the `tabs` array prop
+    - Props: `{ activeTab: string, onActiveTabChange: (id: string) => void, tabs: Array<{ id: string, label: string, body: import('react').ReactNode }> }`
+    - **Rationale for `tabs` array (not `children` map)** — see DEC under "Decisions Generated" below. Labels travel with data, no compound-component magic, generic enough to be reused beyond `MomentCard`
     - **No internal `useState`** — `activeTab` is owned by `App.jsx` and threaded down. Same control pattern used by `ConfigPanel` for `activeTab` (config tabs) and `isCollapsed`
   - `apps/web/src/components/MomentCard.jsx` updated:
     - Right column reorganized: fixed top (Hook + ScriptureBox) → `<CardTabs>` (caption + hashtags + CTA grouped in "Redes Sociais"; transcript-extracted text in "Legenda do Vídeo") → `<details>` score breakdown stays below tabs (outside)
@@ -48,7 +49,8 @@ phase: 3
   - SonarCloud Quality Gate = PASS; `javascript:S3776 = 0` on `transcript-extract.js`, `CardTabs.jsx`, and the touched parts of `MomentCard.jsx`
   - Coverage on `transcript-extract.js` = 100% (pure function); coverage on `CardTabs.jsx` ≥ 90%
 - **Decisions Generated**:
-  - **DEC: Transcript extraction is deterministic, regex-based, frontend-only.** No IA call, no server round-trip. Pure helper at `apps/web/src/lib/transcript-extract.js`.
+  - **DEC: `CardTabs` accepts a `tabs: Array<{id, label, body}>` prop instead of a `children` map.** Pass 1 OUTPUT (v1.0) declared a `children: { id: ReactNode }` shape. Pass 2 plan review proposed and the human approved the array-prop shape on the grounds that (a) children-as-object is non-idiomatic React, (b) labels co-locate with data, (c) the component stays generic enough to host more than two tabs without renaming the slot keys. Recorded here so the black-box auditor and future maintainers see the chosen contract verbatim. The behavioral contract (stateless, controlled, ARIA roles, no internal state, called only by `MomentCard` for now) is unchanged.
+  - **DEC: Transcript extraction is deterministic, hand-parsed (no regex on the hot path), frontend-only.** Originally a single regex `^(\d{1,2}:)?…\s+(.*)$` parsed each line. SonarCloud (`javascript:S5852`, ReDoS vulnerability hotspot, MEDIUM probability) flagged it. Bounded quantifiers actually made the regex safe, but the false positive blocked the Quality Gate on `new_security_hotspots_reviewed`. Refactored to `indexOf` + `split(':')` + `charCode` digit check. Zero regex on the hot path; observable behavior unchanged; 16 extract tests stay green.
   - **DEC (promotion clause): if FASE 6 (or any second consumer — server-side prompt cleaning, export pipeline, etc.) needs the same extractor, the file MIGRATES to `packages/shared` rather than being duplicated.** Single SSOT for transcript slicing. The migration is mechanical (move file, update imports, add to shared's barrel) and must NOT fork the implementation. Recorded here so future-self knows the helper has a planned promotion path; no action now.
   - **DEC: Tab state (`activeCardTab`) is GLOBAL, owned by `App.jsx`, threaded down via props.** Rationale: the active card tab is a visualization preference of the same nature as `subtitleConfig`, `videoConfig`, `overlayConfig`, and `isConfigCollapsed` — one change applies to all 5 cards. Real workflow toggles "copy texts" vs "review speech" across all cards together; per-card local state would cost 5 clicks per toggle and break coherence with the existing global-config pattern. `CardTabs` is stateless / fully controlled to enforce this.
   - **DEC: `activeCardTab` is session-only for now; persistence is a follow-up.** Adding it to `loadVisualPresets / saveVisualPresets` would bump `localStorage` `schemaVersion` from v1 to v2 (with a one-shot migration that drops unknown payloads). That migration is doable but out of scope for TASK_013. Tracked in "Known follow-ups" below.
