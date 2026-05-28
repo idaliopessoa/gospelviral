@@ -16,7 +16,8 @@
   "dependencies": {
     "@gospelviral/shared": "workspace:*",
     "@hono/node-server": "^1.13.7",
-    "hono": "^4.6.14"
+    "hono": "^4.6.14",
+    "which": "^5.0.0"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "^2.1.8",
