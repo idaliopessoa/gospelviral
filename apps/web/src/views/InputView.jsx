@@ -122,9 +122,9 @@ export default function InputView({
           style={{ fontFamily: "'IBM Plex Sans', sans-serif" }}
         >
           <strong className="text-stone-600">Nota:</strong> {'"Ver exemplo pronto"'} usa uma
-          resposta pré-processada para demonstrar a UI sem chamar a API. {'"Analisar"'} aciona o
-          backend (placeholder até TASK_010; depois disso fala com a API ou com o Claude Code CLI
-          conforme o modo escolhido).
+          resposta pré-processada para demonstrar a UI sem chamar o backend. {'"Analisar"'} aciona
+          o backend, que escolhe entre o Claude Code CLI e a API Anthropic conforme o modo
+          ativo no badge — automático, CLI ou API.
         </div>
       </div>
     </div>
