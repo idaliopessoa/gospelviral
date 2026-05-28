@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { BookOpen, Check, ChevronDown, ChevronUp, CircleAlert, Flame, ShieldCheck } from 'lucide-react';
 import { timestampToSeconds } from '../lib/helpers.js';
-import { extractSegmentText } from '../lib/transcript-extract.js';
+import { extractSegmentLines } from '../lib/transcript-extract.js';
 import CardTabs from './CardTabs.jsx';
 import CopyAllButton from './CopyAllButton.jsx';
 import CopyButton from './CopyButton.jsx';
@@ -253,8 +253,8 @@ function RedesSociaisTabBody({ moment }) {
   );
 }
 
-function LegendaVideoTabBody({ segmentText }) {
-  if (!segmentText) {
+function LegendaVideoTabBody({ segmentLines }) {
+  if (segmentLines.length === 0) {
     return (
       <p
         className="text-sm text-stone-500 italic"
@@ -264,22 +264,25 @@ function LegendaVideoTabBody({ segmentText }) {
       </p>
     );
   }
+  const copyText = segmentLines.join('\n');
   return (
     <div className="space-y-2">
       <div
         className="text-[10px] uppercase tracking-[0.15em] text-stone-400 mb-1.5 flex items-center justify-between"
         style={{ fontFamily: "'IBM Plex Sans', sans-serif" }}
       >
-        <span>Texto falado · sem timecodes</span>
-        <CopyButton text={segmentText} label="Copiar" />
+        <span>Texto falado · uma linha por cue</span>
+        <CopyButton text={copyText} label="Copiar" />
       </div>
-      <div className="bg-stone-50 p-4 rounded-sm border border-stone-200">
-        <p
-          className="text-sm leading-relaxed text-stone-800"
-          style={{ fontFamily: "'IBM Plex Sans', sans-serif" }}
-        >
-          {segmentText}
-        </p>
+      <div
+        className="bg-stone-50 p-4 rounded-sm border border-stone-200 space-y-2"
+        style={{ fontFamily: "'IBM Plex Sans', sans-serif" }}
+      >
+        {segmentLines.map((line, i) => (
+          <p key={i} className="text-sm leading-relaxed text-stone-800">
+            {line}
+          </p>
+        ))}
       </div>
     </div>
   );
@@ -343,8 +346,8 @@ export default function MomentCard({
   const startSec = timestampToSeconds(moment.timestamp_start);
   const purposeColor = PURPOSE_COLOR[moment.content_purpose] || '#3F3F3F';
 
-  const segmentText = useMemo(
-    () => extractSegmentText(transcript, moment.timestamp_start, moment.timestamp_end),
+  const segmentLines = useMemo(
+    () => extractSegmentLines(transcript, moment.timestamp_start, moment.timestamp_end),
     [transcript, moment.timestamp_start, moment.timestamp_end],
   );
 
@@ -357,7 +360,7 @@ export default function MomentCard({
     {
       id: 'legenda-video',
       label: 'Legenda do Vídeo',
-      body: <LegendaVideoTabBody segmentText={segmentText} />,
+      body: <LegendaVideoTabBody segmentLines={segmentLines} />,
     },
   ];
 

@@ -174,6 +174,19 @@ describe('MomentCard', () => {
     expect(onActiveCardTabChange).toHaveBeenCalledWith('legenda-video');
   });
 
+  it('renders one paragraph per transcript cue in the legenda tab (line-per-cue, not joined)', () => {
+    // Arrange + Act
+    const { container } = render(
+      <MomentCard {...BASE_PROPS} activeCardTab="legenda-video" />,
+    );
+
+    // Assert — the legenda body container has multiple <p> children, one per cue
+    const legendaBody = container.querySelector('[role="tabpanel"] .space-y-2 .bg-stone-50');
+    expect(legendaBody).toBeTruthy();
+    const paragraphs = legendaBody.querySelectorAll('p');
+    expect(paragraphs.length).toBeGreaterThan(1);
+  });
+
   it('renders "Transcript indisponível" fallback when transcript is empty in the legenda tab', () => {
     // Arrange + Act
     render(

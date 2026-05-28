@@ -29,6 +29,28 @@ function normalize(text) {
 }
 
 /**
+ * Slice a transcript by moment range and return the matching cues
+ * as an array of normalized text lines (one entry per transcript cue,
+ * with continuation text already merged into its anchor cue).
+ *
+ * @param {string} transcript raw transcript ("MM:SS text" or "HH:MM:SS text" per line)
+ * @param {string} startTs   moment.timestamp_start ("MM:SS" or "HH:MM:SS")
+ * @param {string} endTs     moment.timestamp_end ("MM:SS" or "HH:MM:SS")
+ * @returns {string[]} per-cue text array; empty array on degenerate input
+ */
+export function extractSegmentLines(transcript, startTs, endTs) {
+  const startSec = timestampToSeconds(startTs);
+  const endSec = timestampToSeconds(endTs);
+  if (endSec <= startSec) return [];
+  const lines = parseTranscriptLines(transcript);
+  if (lines.length === 0) return [];
+  return lines
+    .filter((l) => l.tsSec >= startSec && l.tsSec < endSec)
+    .map((l) => normalize(l.text))
+    .filter((t) => t.length > 0);
+}
+
+/**
  * Slice a transcript by moment range and return the concatenated text.
  *
  * @param {string} transcript raw transcript ("MM:SS text" or "HH:MM:SS text" per line)
@@ -37,11 +59,5 @@ function normalize(text) {
  * @returns {string} joined text with timecodes stripped; empty string on degenerate input
  */
 export function extractSegmentText(transcript, startTs, endTs) {
-  const startSec = timestampToSeconds(startTs);
-  const endSec = timestampToSeconds(endTs);
-  if (endSec <= startSec) return '';
-  const lines = parseTranscriptLines(transcript);
-  if (lines.length === 0) return '';
-  const within = lines.filter((l) => l.tsSec >= startSec && l.tsSec < endSec);
-  return normalize(within.map((l) => l.text).join(' '));
+  return extractSegmentLines(transcript, startTs, endTs).join(' ');
 }

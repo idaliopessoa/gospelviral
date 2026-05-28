@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { extractSegmentText } from './transcript-extract.js';
+import { extractSegmentLines, extractSegmentText } from './transcript-extract.js';
 
 describe('extractSegmentText', () => {
   it('happy path: MM:SS lines, range fully inside the transcript returns concatenated text without timecodes', () => {
@@ -151,5 +151,67 @@ describe('extractSegmentText', () => {
     expect(a).toBe('');
     expect(b).toBe('');
     expect(c).toBe('');
+  });
+});
+
+describe('extractSegmentLines', () => {
+  it('returns one entry per matched transcript cue (no joining across cues)', () => {
+    // Arrange
+    const transcript = [
+      '00:00 line zero',
+      '00:30 line thirty',
+      '01:00 line sixty',
+      '01:30 line ninety',
+    ].join('\n');
+
+    // Act
+    const out = extractSegmentLines(transcript, '00:30', '01:30');
+
+    // Assert
+    expect(out).toEqual(['line thirty', 'line sixty']);
+  });
+
+  it('continuation lines stay merged into the anchor cue (single array entry)', () => {
+    // Arrange
+    const transcript = [
+      '00:00 anchor zero',
+      '01:00 anchor sixty',
+      'continuation of anchor sixty',
+      'second continuation',
+      '02:00 anchor one twenty',
+    ].join('\n');
+
+    // Act
+    const out = extractSegmentLines(transcript, '01:00', '02:00');
+
+    // Assert
+    expect(out).toEqual([
+      'anchor sixty continuation of anchor sixty second continuation',
+    ]);
+  });
+
+  it('degenerate inputs return empty array (not empty string)', () => {
+    // Arrange + Act
+    const reversed = extractSegmentLines('00:00 a\n01:00 b', '02:00', '01:00');
+    const empty = extractSegmentLines('', '00:00', '01:00');
+    const noTs = extractSegmentLines('no timestamps at all', '00:00', '01:00');
+
+    // Assert
+    expect(reversed).toEqual([]);
+    expect(empty).toEqual([]);
+    expect(noTs).toEqual([]);
+  });
+
+  it('per-line whitespace normalization is preserved (no leading/trailing/double spaces)', () => {
+    // Arrange
+    const transcript = ['00:00    spaced   text   here', '00:30   another  '].join(
+      '\n',
+    );
+
+    // Act
+    const out = extractSegmentLines(transcript, '00:00', '01:00');
+
+    // Assert
+    expect(out).toEqual(['spaced text here', 'another']);
   });
 });
