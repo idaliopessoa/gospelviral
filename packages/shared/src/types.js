@@ -1,0 +1,172 @@
+/**
+ * Canonical primitives that flow across the HTTP and persistence boundaries.
+ * Defined as JSDoc typedefs so both apps/web and apps/server can lean on them
+ * without a TypeScript build step.
+ */
+
+/**
+ * @typedef {Object} CanvasReference
+ * @property {1080} width
+ * @property {1920} height
+ */
+export const CANVAS_REFERENCE = Object.freeze({ width: 1080, height: 1920 });
+
+/**
+ * Subtitle anchor presets (percentage of canvas height).
+ * @typedef {Object} SubtitleAnchors
+ * @property {12} top
+ * @property {50} center
+ * @property {86} bottom
+ */
+export const SUBTITLE_ANCHOR_PERCENT = Object.freeze({ top: 12, center: 50, bottom: 86 });
+
+/**
+ * @typedef {Object} SubtitleConfig
+ * @property {string} font
+ * @property {string} textColor
+ * @property {'solid'|'transparent'} background
+ * @property {string} bgColor
+ * @property {number} charsPerScreen
+ * @property {number} lines
+ * @property {'top'|'center'|'bottom'} position
+ * @property {number} size
+ * @property {boolean} highlightScripture
+ * @property {boolean} highlightKeywords
+ * @property {number} x  offset in 1080-px canvas reference
+ * @property {number} y  offset in 1080-px canvas reference
+ */
+
+/**
+ * @typedef {Object} VideoConfig
+ * @property {number} x      canvas-reference px
+ * @property {number} y      canvas-reference px
+ * @property {number} scale  multiplier, 1 = native
+ */
+
+/**
+ * @typedef {Object} OverlayConfig
+ * @property {string|null} dataURL  data:image/png;base64,... or null when absent
+ * @property {number} opacity       0..1
+ * @property {string|null} filename original filename for UI display
+ */
+
+/**
+ * @typedef {Object} ScoreEntry
+ * @property {number} score   0..10
+ * @property {string} notes   free-form analyst rationale
+ */
+
+/**
+ * @typedef {Object} ScoreBreakdown
+ * @property {ScoreEntry} emotional_resonance
+ * @property {ScoreEntry} information_value
+ * @property {ScoreEntry} story_quality
+ * @property {ScoreEntry} shareability
+ * @property {ScoreEntry} controversy_potential
+ * @property {ScoreEntry} hook_strength
+ */
+
+/**
+ * @typedef {Object} TheologicalCheck
+ * @property {boolean} christ_centered
+ * @property {boolean} scripture_based
+ * @property {boolean} grace_focused
+ * @property {boolean} hope_present
+ * @property {boolean} authentic
+ * @property {string[]} red_flags
+ */
+
+/**
+ * @typedef {Object} ColdOpenAnalysis
+ * @property {number} viability_score          0..50
+ * @property {'apply_cold_open'|'keep_linear'} decision
+ * @property {{timestamp: string, why_powerful: string}} peak_moment
+ */
+
+/**
+ * @typedef {Object} KeyScripture
+ * @property {string} reference   e.g. "Salmos 34:18"
+ * @property {string} text
+ * @property {string} when_to_display
+ */
+
+/**
+ * @typedef {Object} CaptionBlock
+ * @property {string} text
+ * @property {string} structure_used
+ * @property {number} word_count
+ */
+
+/**
+ * @typedef {Object} Cta
+ * @property {string} primary
+ * @property {'evangelization'|'edification'|'prayer'|'long_form'} objective
+ */
+
+/**
+ * @typedef {Object} Moment
+ * @property {number} rank                            1..5
+ * @property {string} timestamp_start                 "MM:SS"
+ * @property {string} timestamp_end                   "MM:SS"
+ * @property {number} duration_seconds
+ * @property {'evangelization'|'edification'|'hybrid'} content_purpose
+ * @property {number} viral_score                     0..10
+ * @property {ScoreBreakdown} score_breakdown
+ * @property {TheologicalCheck} theological_check
+ * @property {ColdOpenAnalysis} cold_open_analysis
+ * @property {string} theme
+ * @property {string} content_category
+ * @property {string} hook_title
+ * @property {string} key_quote
+ * @property {KeyScripture} key_scripture
+ * @property {CaptionBlock} caption
+ * @property {{all: string}} hashtags
+ * @property {Cta} cta
+ * @property {string} viral_reasoning
+ */
+
+/**
+ * @typedef {Object} AnalysisMetadata
+ * @property {string} total_duration                  "MM:SS"
+ * @property {string} overall_topic
+ * @property {string} content_type
+ * @property {string[]} primary_scripture_references
+ * @property {string[]} theological_themes
+ */
+
+/**
+ * @typedef {Object} AnalysisSummary
+ * @property {number} candidates_above_threshold
+ * @property {5} top_moments_selected
+ * @property {{evangelization: string, edification: string}} balance
+ */
+
+/**
+ * @typedef {Object} AnalysisResponse
+ * @property {AnalysisMetadata} metadata
+ * @property {AnalysisSummary} analysis_summary
+ * @property {Moment[]} top_moments              length exactly 5 after parser slicing
+ */
+
+/**
+ * @typedef {Object} AnalysisRequest
+ * @property {string} url
+ * @property {string} transcript
+ * @property {'cli'|'api'} [mode]
+ * @property {string} [model]
+ */
+
+/**
+ * @typedef {Object} RuntimeStatus
+ * @property {boolean} cli       claude CLI detected on PATH
+ * @property {boolean} apiKey    a valid-looking ANTHROPIC_API_KEY present in the environment
+ * @property {'cli'|'api'} recommended
+ */
+
+export const ANALYSIS_RESPONSE_REQUIRED_KEYS = Object.freeze([
+  'metadata',
+  'analysis_summary',
+  'top_moments',
+]);
+
+export const TOP_MOMENTS_COUNT = 5;
