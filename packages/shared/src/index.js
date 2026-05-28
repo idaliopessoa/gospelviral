@@ -3,6 +3,7 @@ export {
   SUBTITLE_ANCHOR_PERCENT,
   ANALYSIS_RESPONSE_REQUIRED_KEYS,
   TOP_MOMENTS_COUNT,
+  VIDEO_MIME_ALLOWLIST_DEFAULT,
 } from './types.js';
 export {
   AnalysisResponseError,

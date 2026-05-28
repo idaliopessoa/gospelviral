@@ -170,3 +170,27 @@ export const ANALYSIS_RESPONSE_REQUIRED_KEYS = Object.freeze([
 ]);
 
 export const TOP_MOMENTS_COUNT = 5;
+
+/**
+ * Reference to a video file ingested via upload. Pure handle — server owns the
+ * disk path under the configured upload dir; consumers see only the typed
+ * envelope. Codec / fps / resolution / duration are NOT part of this shape
+ * (the file is a reference, not a description) — Phase 6 export will read
+ * them from a separate module if needed.
+ *
+ * @typedef {Object} VideoSource
+ * @property {string} id           uuid v4 generated server-side
+ * @property {string} filename     sanitized original filename (display only; NEVER on disk)
+ * @property {number} sizeBytes
+ * @property {string} mimeType     one of VIDEO_MIME_ALLOWLIST_DEFAULT (or whatever the server allows)
+ * @property {string} uploadedAt   ISO 8601 timestamp
+ */
+
+/**
+ * Phase 4 default mime allowlist for video uploads. `mp4` covers H.264/H.265
+ * containers from most editors; `quicktime` covers `.mov` (iPhone, Premiere);
+ * `webm` is included at zero extra cost (VP8/VP9/AV1).
+ */
+export const VIDEO_MIME_ALLOWLIST_DEFAULT = Object.freeze(
+  new Set(['video/mp4', 'video/quicktime', 'video/webm']),
+);
