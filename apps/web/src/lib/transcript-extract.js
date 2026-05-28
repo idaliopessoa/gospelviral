@@ -1,20 +1,40 @@
 import { timestampToSeconds } from './helpers.js';
 
-const TIMESTAMP_LINE = /^(?:(\d{1,2}):)?(\d{1,2}):(\d{2})\s+(.*)$/;
+function isDigits(s, min, max) {
+  if (s.length < min || s.length > max) return false;
+  for (let i = 0; i < s.length; i++) {
+    const c = s.charCodeAt(i);
+    if (c < 48 || c > 57) return false;
+  }
+  return true;
+}
 
-function tsToSeconds(hh, mm, ss) {
-  const h = hh ? Number(hh) : 0;
-  return h * 3600 + Number(mm) * 60 + Number(ss);
+function parseTimestampPrefix(raw) {
+  const space = raw.indexOf(' ');
+  if (space <= 0) return null;
+  const head = raw.slice(0, space);
+  const parts = head.split(':');
+  if (parts.length < 2 || parts.length > 3) return null;
+  for (let i = 0; i < parts.length - 1; i++) {
+    if (!isDigits(parts[i], 1, 2)) return null;
+  }
+  if (!isDigits(parts[parts.length - 1], 2, 2)) return null;
+  const tsSec =
+    parts.length === 3
+      ? Number(parts[0]) * 3600 + Number(parts[1]) * 60 + Number(parts[2])
+      : Number(parts[0]) * 60 + Number(parts[1]);
+  let textStart = space + 1;
+  while (textStart < raw.length && raw.charCodeAt(textStart) === 32) textStart++;
+  return { tsSec, text: raw.slice(textStart) };
 }
 
 function parseTranscriptLines(transcript) {
   if (typeof transcript !== 'string' || transcript.length === 0) return [];
   const out = [];
   for (const raw of transcript.split('\n')) {
-    const match = TIMESTAMP_LINE.exec(raw);
-    if (match) {
-      const [, hh, mm, ss, text] = match;
-      out.push({ tsSec: tsToSeconds(hh, mm, ss), text });
+    const parsed = parseTimestampPrefix(raw);
+    if (parsed) {
+      out.push(parsed);
       continue;
     }
     if (out.length === 0) continue;
