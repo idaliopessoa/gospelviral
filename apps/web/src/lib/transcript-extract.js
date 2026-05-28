@@ -43,8 +43,5 @@ export function extractSegmentText(transcript, startTs, endTs) {
   const lines = parseTranscriptLines(transcript);
   if (lines.length === 0) return '';
   const within = lines.filter((l) => l.tsSec >= startSec && l.tsSec < endSec);
-  if (within.length === 0 && startSec < lines[0].tsSec) {
-    within.push(...lines.filter((l) => l.tsSec < endSec));
-  }
   return normalize(within.map((l) => l.text).join(' '));
 }
