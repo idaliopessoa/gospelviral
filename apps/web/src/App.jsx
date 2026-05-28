@@ -2,16 +2,12 @@ import { useMemo, useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { EXAMPLE_RESPONSE, EXAMPLE_TRANSCRIPT, EXAMPLE_URL } from '@gospelviral/shared';
 import { extractVideoId } from './lib/helpers.js';
-import {
-  DEFAULT_OVERLAY_CONFIG,
-  DEFAULT_SUBTITLE_CONFIG,
-  DEFAULT_VIDEO_CONFIG,
-  LOADING_MESSAGES,
-  LOADING_ROTATION_MS,
-} from './config/defaults.js';
+import { LOADING_MESSAGES, LOADING_ROTATION_MS } from './config/defaults.js';
+import { loadVisualPresets } from './lib/persistence.js';
 import { useAnalyze } from './hooks/useAnalyze.js';
 import { useLoadingRotation } from './hooks/useLoadingRotation.js';
 import { useRuntime } from './hooks/useRuntime.js';
+import { useVisualPresetsPersistence } from './hooks/useVisualPresetsPersistence.js';
 import InputView from './views/InputView.jsx';
 import AnalyzingView from './views/AnalyzingView.jsx';
 import ResultsView from './views/ResultsView.jsx';
@@ -67,11 +63,24 @@ export default function App() {
   const [url, setUrl] = useState('');
   const [transcript, setTranscript] = useState('');
   const [exampleVideoId, setExampleVideoId] = useState(null);
-  const [subtitleConfig, setSubtitleConfig] = useState(DEFAULT_SUBTITLE_CONFIG);
-  const [videoConfig, setVideoConfig] = useState(DEFAULT_VIDEO_CONFIG);
-  const [overlayConfig, setOverlayConfig] = useState(DEFAULT_OVERLAY_CONFIG);
+  // useState lazy-initializer: loadVisualPresets is called exactly once on
+  // first render, then the result feeds React state for the rest of the
+  // session. Subsequent edits trigger writes through useVisualPresetsPersistence.
+  const [initialPresets] = useState(loadVisualPresets);
+  const [subtitleConfig, setSubtitleConfig] = useState(initialPresets.subtitleConfig);
+  const [videoConfig, setVideoConfig] = useState(initialPresets.videoConfig);
+  const [overlayConfig, setOverlayConfig] = useState(initialPresets.overlayConfig);
   const [activeTab, setActiveTab] = useState('subtitle');
-  const [isConfigCollapsed, setIsConfigCollapsed] = useState(false);
+  const [isConfigCollapsed, setIsConfigCollapsed] = useState(
+    initialPresets.isConfigCollapsed,
+  );
+
+  useVisualPresetsPersistence({
+    subtitleConfig,
+    videoConfig,
+    overlayConfig,
+    isConfigCollapsed,
+  });
 
   const runtime = useRuntime();
   const { view, results, error, analyze, showExample, reset } = useAnalyze();
