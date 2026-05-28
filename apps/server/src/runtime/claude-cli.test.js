@@ -253,6 +253,22 @@ describe('runViaCli', () => {
     ).rejects.toMatchObject({ name: 'AbortError' });
   });
 
+  it('accepts maxTokens for API parity (CLI ignores it; no spawn arg emitted)', async () => {
+    // Arrange
+    const spawnImpl = makeSpawnImpl({ happyPath: true });
+
+    // Act
+    const out = await runViaCli({ ...BASE_ARGS, maxTokens: 16_000, spawnImpl });
+
+    // Assert — returns normally and no --max-tokens / max_tokens flag appears in argv
+    expect(out.top_moments).toHaveLength(5);
+    const analyzeCall = spawnImpl.mock.calls.find(
+      ([, args]) => args.includes('--output-format'),
+    );
+    const args = analyzeCall[1];
+    expect(args.some((a) => /max[-_]?tokens/i.test(String(a)))).toBe(false);
+  });
+
   it('produces the same AnalysisResponse as runViaApi for identical fixtures (cross-adapter contract)', async () => {
     // Arrange
     const spawnImpl = makeSpawnImpl({ happyPath: true });

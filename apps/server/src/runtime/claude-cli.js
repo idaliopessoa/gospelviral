@@ -87,12 +87,18 @@ function waitForExit(child) {
 /**
  * Spawn the Claude Code CLI, deliver the prompt via stdin, parse the
  * stream-json output, and resolve to a canonical `AnalysisResponse`. Same
- * contract as `runViaApi`.
+ * contract as `runViaApi` (DEC_014) — callers cannot tell the two apart.
+ *
+ * `maxTokens` is accepted for API parity but is NOT forwarded to the CLI
+ * binary: the Claude Code CLI exposes no `--max-tokens` flag and pulls the
+ * model's native context window automatically. The parameter is documented
+ * in the signature so callers can hand `runVia*` the same options object.
  *
  * @param {{
  *   systemPrompt: string,
  *   userMessage: string,
  *   modelId: string,
+ *   maxTokens?: number,
  *   signal?: AbortSignal,
  *   binPath?: string,
  *   spawnImpl?: typeof spawn,
@@ -104,6 +110,7 @@ export async function runViaCli({
   systemPrompt,
   userMessage,
   modelId,
+  maxTokens: _maxTokens,
   signal,
   binPath,
   spawnImpl = spawn,
