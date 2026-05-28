@@ -1,7 +1,7 @@
 /**
  * Default values for the three global config objects — must mirror the
- * artifact (`viral-cristao-artifact.jsx`) byte-for-byte. TASK_011 will
- * persist these to localStorage; until then the defaults reset on reload.
+ * frozen reference (`reference/viral-cristao-artifact.jsx`) byte-for-byte.
+ * TASK_011 persists these to localStorage via lib/persistence.js.
  */
 export const DEFAULT_SUBTITLE_CONFIG = Object.freeze({
   font: 'IBM Plex Sans',

@@ -29,7 +29,7 @@ details > summary::-webkit-details-marker {
  * Fixed canvas dimensions in pure CSS to dodge Tailwind arbitrary-value
  * compilation issues observed in the artifact host. In Vite + Tailwind JIT
  * these would compile, but the CSS-puro fallback stays as defense-in-depth.
- * — verbatim from viral-cristao-artifact.jsx
+ * — verbatim from reference/viral-cristao-artifact.jsx
  */
 .canvas-9-16 {
   width: 280px;
