@@ -5,6 +5,8 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { env } from './config/env.js';
 import { createLogger } from './lib/logger.js';
+import { createAnalyzeRouter } from './routes/analyze.js';
+import { createDetectRouter } from './routes/detect.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const pkg = JSON.parse(
@@ -18,6 +20,9 @@ export const app = new Hono();
 app.get('/healthz', (c) =>
   c.json({ status: 'ok', version: pkg.version }),
 );
+
+app.route('/api/analyze', createAnalyzeRouter());
+app.route('/api/runtime/detect', createDetectRouter());
 
 const isMain = import.meta.url === `file://${process.argv[1]}`;
 
