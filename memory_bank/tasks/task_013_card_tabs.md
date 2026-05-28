@@ -1,6 +1,6 @@
 # TASK_013: Card Tabs — Redes Sociais / Legenda do Vídeo
 timestamp: 2026-05-28T00:00:00Z
-version: 1.2
+version: 1.3
 status: Ready
 owner: unassigned
 confidence: HIGH
@@ -24,8 +24,9 @@ phase: 3
 ### OUTPUT
 - **Deliverables**:
   - `apps/web/src/lib/transcript-extract.js` — exports:
-    - `extractSegmentText(transcript: string, startTs: string, endTs: string): string` — deterministic slice of transcript lines whose leading timestamp falls within `[start, end)`, returning text only (timecodes stripped, lines joined with `' '`)
-    - Internal `parseTranscriptLines(transcript)` allowed but **not exported** — only `extractSegmentText` is the public surface
+    - `extractSegmentLines(transcript: string, startTs: string, endTs: string): string[]` — primary public surface; returns one normalized entry per matched transcript cue (continuation text already merged into its anchor cue). Used by `MomentCard` to render one `<p>` per cue
+    - `extractSegmentText(transcript: string, startTs: string, endTs: string): string` — convenience wrapper around `extractSegmentLines` that joins entries with `' '`. Kept for any future consumer that needs a flat string; not currently used by `MomentCard`
+    - Internal `parseTranscriptLines(transcript)`, `parseTimestampPrefix(raw)`, `isDigits(s, min, max)` — **not exported**
   - `apps/web/src/lib/transcript-extract.test.js` — full Vitest suite (cases enumerated in Quality Gates below)
   - `apps/web/src/components/CardTabs.jsx` — new **stateless / fully controlled** component. Receives the active tab + change callback from above; renders the tab buttons and the active tab body declared in the `tabs` array prop
     - Props: `{ activeTab: string, onActiveTabChange: (id: string) => void, tabs: Array<{ id: string, label: string, body: import('react').ReactNode }> }`
@@ -34,8 +35,8 @@ phase: 3
   - `apps/web/src/components/MomentCard.jsx` updated:
     - Right column reorganized: fixed top (Hook + ScriptureBox) → `<CardTabs>` (caption + hashtags + CTA grouped in "Redes Sociais"; transcript-extracted text in "Legenda do Vídeo") → `<details>` score breakdown stays below tabs (outside)
     - New props: `transcript: string`, `activeCardTab: 'redes-sociais' | 'legenda-video'`, `onActiveCardTabChange: (tab) => void`
-    - Helper consumed: `extractSegmentText(transcript, moment.timestamp_start, moment.timestamp_end)` computed inline in the "Legenda do Vídeo" tab body (memoized via `useMemo` keyed on the three inputs). Memoization gates the helper call so re-renders driven by other prop changes do not re-slice
-    - `CopyButton` added at the top of "Legenda do Vídeo" tab to copy the extracted text
+    - Helper consumed: `extractSegmentLines(transcript, moment.timestamp_start, moment.timestamp_end)` computed inline in the "Legenda do Vídeo" tab body (memoized via `useMemo` keyed on the three inputs). Memoization gates the helper call so re-renders driven by other prop changes do not re-slice. Each returned line is rendered as its own `<p>` (one paragraph per cue, mirroring the timecode source structure)
+    - `CopyButton` at the top of "Legenda do Vídeo" tab copies the lines joined with `'\n'` (preserves the per-line structure when pasted elsewhere)
   - `apps/web/src/views/ResultsView.jsx` updated: accepts `transcript`, `activeCardTab`, `setActiveCardTab` props; passes them to each `MomentCard` (same shape used for `activeTab` of `ConfigPanel`)
   - `apps/web/src/App.jsx` updated:
     - New state: `const [activeCardTab, setActiveCardTab] = useState('redes-sociais')`
@@ -49,6 +50,7 @@ phase: 3
   - SonarCloud Quality Gate = PASS; `javascript:S3776 = 0` on `transcript-extract.js`, `CardTabs.jsx`, and the touched parts of `MomentCard.jsx`
   - Coverage on `transcript-extract.js` = 100% (pure function); coverage on `CardTabs.jsx` ≥ 90%
 - **Decisions Generated**:
+  - **DEC: Legenda do Vídeo renders one paragraph per transcript cue (line-per-cue), not a joined paragraph.** User feedback during the SUBTASK_013.5 browser smoke asked for the legenda to mirror the timecode source structure — one cue per visual line. The helper grew a `extractSegmentLines: (...)=>string[]` primary export; the existing `extractSegmentText` becomes a thin wrapper that joins with `' '` and is kept for any future consumer that needs a flat string. `MomentCard.LegendaVideoTabBody` maps the lines to `<p>` elements; `CopyButton.text` joins the lines with `'\n'` so paste preserves structure. The behavior change is additive (new export, alternative render path) and pinned by a new test in `MomentCard.test.jsx` asserting `paragraphs.length > 1` in the legenda body.
   - **DEC: `CardTabs` accepts a `tabs: Array<{id, label, body}>` prop instead of a `children` map.** Pass 1 OUTPUT (v1.0) declared a `children: { id: ReactNode }` shape. Pass 2 plan review proposed and the human approved the array-prop shape on the grounds that (a) children-as-object is non-idiomatic React, (b) labels co-locate with data, (c) the component stays generic enough to host more than two tabs without renaming the slot keys. Recorded here so the black-box auditor and future maintainers see the chosen contract verbatim. The behavioral contract (stateless, controlled, ARIA roles, no internal state, called only by `MomentCard` for now) is unchanged.
   - **DEC: Transcript extraction is deterministic, hand-parsed (no regex on the hot path), frontend-only.** Originally a single regex `^(\d{1,2}:)?…\s+(.*)$` parsed each line. SonarCloud (`javascript:S5852`, ReDoS vulnerability hotspot, MEDIUM probability) flagged it. Bounded quantifiers actually made the regex safe, but the false positive blocked the Quality Gate on `new_security_hotspots_reviewed`. Refactored to `indexOf` + `split(':')` + `charCode` digit check. Zero regex on the hot path; observable behavior unchanged; 16 extract tests stay green.
   - **DEC (promotion clause): if FASE 6 (or any second consumer — server-side prompt cleaning, export pipeline, etc.) needs the same extractor, the file MIGRATES to `packages/shared` rather than being duplicated.** Single SSOT for transcript slicing. The migration is mechanical (move file, update imports, add to shared's barrel) and must NOT fork the implementation. Recorded here so future-self knows the helper has a planned promotion path; no action now.

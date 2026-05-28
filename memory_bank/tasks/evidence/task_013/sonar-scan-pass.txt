@@ -1,0 +1,164 @@
+> gospelviral@0.0.0 sonar /Users/idaliopessoa/dev/gospelviral
+> sonar
+[INFO]  Bootstrapper: Retrieving info from "package.json" file
+[INFO]  Bootstrapper: Platform: darwin x64
+[INFO]  Bootstrapper: Server URL: https://sonarcloud.io
+[INFO]  Bootstrapper: Version: 4.3.6
+[INFO]  Bootstrapper: JRE provisioning is supported
+[INFO]  Bootstrapper: Using JRE from the cache
+[INFO]  ScannerEngine: Starting SonarScanner Engine...
+[INFO]  ScannerEngine: Java 21.0.9 Eclipse Adoptium (64-bit)
+[INFO]  ScannerEngine: Load global settings
+[INFO]  ScannerEngine: Load global settings (done) | time=705ms
+[INFO]  ScannerEngine: Server id: 1BD809FA-AWHW8ct9-T_TB3XqouNu
+[INFO]  ScannerEngine: Loading required plugins
+[INFO]  ScannerEngine: Load plugins index
+[INFO]  ScannerEngine: Load plugins index (done) | time=305ms
+[INFO]  ScannerEngine: Load/download plugins
+[INFO]  ScannerEngine: Load/download plugins (done) | time=52ms
+[INFO]  ScannerEngine: Loaded core extensions: architecture, a3s, sca
+[INFO]  ScannerEngine: Process project properties
+[INFO]  ScannerEngine: Project key: idaliopessoa_gospelviral
+[INFO]  ScannerEngine: Base dir: /Users/idaliopessoa/dev/gospelviral
+[INFO]  ScannerEngine: Working dir: /Users/idaliopessoa/dev/gospelviral/.scannerwork
+[INFO]  ScannerEngine: Load project settings for component key: 'idaliopessoa_gospelviral'
+[INFO]  ScannerEngine: Load project settings for component key: 'idaliopessoa_gospelviral' (done) | time=659ms
+[INFO]  ScannerEngine: Check ALM binding of project 'idaliopessoa_gospelviral'
+[INFO]  ScannerEngine: Detected project binding: BOUND
+[INFO]  ScannerEngine: Check ALM binding of project 'idaliopessoa_gospelviral' (done) | time=346ms
+[INFO]  ScannerEngine: Load branch configuration
+[INFO]  ScannerEngine: Load branch configuration (done) | time=1ms
+[INFO]  ScannerEngine: Create analysis
+[INFO]  ScannerEngine: Create analysis (done) | time=487ms
+[INFO]  ScannerEngine: Load quality profiles
+[INFO]  ScannerEngine: Load quality profiles (done) | time=620ms
+[INFO]  ScannerEngine: Load active rules
+[INFO]  ScannerEngine: Load active rules (done) | time=2322ms
+[INFO]  ScannerEngine: Organization key: idaliopessoa
+[INFO]  ScannerEngine: Preprocessing files...
+[INFO]  ScannerEngine: 2 languages detected in 96 preprocessed files (done) | time=298ms
+[INFO]  ScannerEngine: 96 files ignored because of inclusion/exclusion patterns
+[INFO]  ScannerEngine: 0 files ignored because of scm ignore settings
+[INFO]  ScannerEngine: Loading plugins for detected languages
+[INFO]  ScannerEngine: Load/download plugins
+[INFO]  ScannerEngine: Load/download plugins (done) | time=36ms
+[INFO]  ScannerEngine: Load project repositories
+[INFO]  ScannerEngine: Load project repositories (done) | time=367ms
+[INFO]  ScannerEngine: Indexing files...
+[INFO]  ScannerEngine: Project configuration:
+[INFO]  ScannerEngine:   Excluded sources: apps/server/scripts/**, **/build-wrapper-dump.json, **/*.test.js, **/*.test.jsx, **/*.spec.js, **/__tests__/**
+[INFO]  ScannerEngine:   Included tests: **/*.test.js, **/*.test.jsx, **/*.spec.js, **/__tests__/**
+[INFO]  ScannerEngine: 96 files indexed (done) | time=13ms
+[INFO]  ScannerEngine: Quality profile for css: Sonar way
+[INFO]  ScannerEngine: Quality profile for js: Sonar way
+[INFO]  ScannerEngine: ------------- Run sensors on module gospelviral
+[INFO]  ScannerEngine: Load metrics repository
+[INFO]  ScannerEngine: Load metrics repository (done) | time=277ms
+[INFO]  ScannerEngine: Sensor cache enabled
+[INFO]  ScannerEngine: Load sensor cache
+[INFO]  ScannerEngine: Load sensor cache (462 KB) | time=2216ms
+[INFO]  ScannerEngine: Reflections took 78 ms to scan 1 urls, producing 26 keys and 266 values
+[INFO]  ScannerEngine: Sensor HTML [web]
+[INFO]  ScannerEngine: Sensor HTML [web] (done) | time=3ms
+[INFO]  ScannerEngine: Sensor JasminFileCollectorSensor [jasmin]
+[INFO]  ScannerEngine: Sensor JasminFileCollectorSensor [jasmin] (done) | time=0ms
+[INFO]  ScannerEngine: Sensor IaC hadolint report Sensor [iac]
+[INFO]  ScannerEngine: Sensor IaC hadolint report Sensor [iac] (done) | time=0ms
+[INFO]  ScannerEngine: Sensor Java Config Sensor [iac]
+[INFO]  ScannerEngine: There are no files to be analyzed for the Java language
+[INFO]  ScannerEngine: Sensor Java Config Sensor [iac] (done) | time=10ms
+[INFO]  ScannerEngine: Sensor IaC Docker Sensor [iac]
+[INFO]  ScannerEngine: There are no files to be analyzed for the Docker language
+[INFO]  ScannerEngine: Sensor IaC Docker Sensor [iac] (done) | time=1ms
+[INFO]  ScannerEngine: Sensor IaC GitHub Actions Sensor [iac]
+[INFO]  ScannerEngine: There are no files to be analyzed for the GitHub Actions language
+[INFO]  ScannerEngine: Sensor IaC GitHub Actions Sensor [iac] (done) | time=0ms
+[INFO]  ScannerEngine: Sensor IaC actionlint report Sensor [iac]
+[INFO]  ScannerEngine: Sensor IaC actionlint report Sensor [iac] (done) | time=0ms
+[INFO]  ScannerEngine: Sensor IaC Shell Sensor [iac]
+[INFO]  ScannerEngine: There are no files to be analyzed for the Shell language
+[INFO]  ScannerEngine: Sensor IaC Shell Sensor [iac] (done) | time=0ms
+[INFO]  ScannerEngine: Sensor JavaScript/TypeScript/CSS analysis [javascript]
+[INFO]  ScannerEngine: Detected os: Mac OS X arch: x86_64 alpine: false. Platform: UNSUPPORTED
+[INFO]  ScannerEngine: Using Node.js executable: '/Users/idaliopessoa/dev/gospelviral/.scannerwork/.sonartmp/bridge-bundle/package/bin/run-node'.
+[INFO]  ScannerEngine: Memory configuration: OS (32768 MB), Node.js (4288 MB).
+[INFO]  ScannerEngine: gRPC analyze-project server listening on 127.0.0.1:49766
+[INFO]  ScannerEngine: Plugin version: [12.5.0.41048]
+[INFO]  ScannerEngine: Found 0 tsconfig.json file(s): []
+[INFO]  ScannerEngine: 95 source files to be analyzed
+[INFO]  ScannerEngine: Analyzing 94 file(s) using default options [lib: lib.es2023.d.ts, lib.dom.d.ts]
+[INFO]  ScannerEngine: No boundary descriptors defined
+[INFO]  ScannerEngine: 95/95 source files have been analyzed
+[INFO]  ScannerEngine: JasminAstConsumer done
+[INFO]  ScannerEngine: Hit the cache for 0 out of 94
+[INFO]  ScannerEngine: Miss the cache for 94 out of 94: ANALYSIS_MODE_INELIGIBLE [94/94]
+[INFO]  ScannerEngine: Sensor JavaScript/TypeScript/CSS analysis [javascript] (done) | time=11111ms
+[INFO]  ScannerEngine: Sensor JavaScript/TypeScript Coverage [javascript]
+[INFO]  ScannerEngine: Analysing [/Users/idaliopessoa/dev/gospelviral/apps/web/coverage/lcov.info, /Users/idaliopessoa/dev/gospelviral/apps/server/coverage/lcov.info, /Users/idaliopessoa/dev/gospelviral/packages/shared/coverage/lcov.info]
+[WARN]  ScannerEngine: Could not resolve 4 file paths in [/Users/idaliopessoa/dev/gospelviral/apps/web/coverage/lcov.info, /Users/idaliopessoa/dev/gospelviral/apps/server/coverage/lcov.info, /Users/idaliopessoa/dev/gospelviral/packages/shared/coverage/lcov.info]
+[WARN]  ScannerEngine: First unresolved path: postcss.config.js (Run in DEBUG mode to get full list of unresolved paths)
+[INFO]  ScannerEngine: Sensor JavaScript/TypeScript Coverage [javascript] (done) | time=45ms
+[INFO]  ScannerEngine: Sensor EnterpriseTextAndSecretsSensor [textenterprise]
+[INFO]  ScannerEngine: Available processors: 12
+[INFO]  ScannerEngine: Using 12 threads for analysis.
+[INFO]  ScannerEngine: Start fetching files for the text and secrets analysis
+[INFO]  ScannerEngine: Using Git CLI to retrieve dirty files
+[INFO]  ScannerEngine: Retrieving language associated files and files included via "sonar.text.inclusions" that are tracked by git
+[INFO]  ScannerEngine: Starting the text and secrets analysis
+[INFO]  ScannerEngine: 95 source files to be analyzed for the text and secrets analysis
+[INFO]  ScannerEngine: 95/95 source files have been analyzed for the text and secrets analysis
+[INFO]  ScannerEngine: Start fetching files for the binary file analysis
+[INFO]  ScannerEngine: There are no files to be analyzed for the binary file analysis
+[INFO]  ScannerEngine: Sensor EnterpriseTextAndSecretsSensor [textenterprise] (done) | time=922ms
+[INFO]  ScannerEngine: ------------- Run sensors on project
+[INFO]  ScannerEngine: Sensor JsSecuritySensorV2 [jasmin]
+[INFO]  ScannerEngine: 53 file(s) will be analysed by SonarJasmin.
+[INFO]  ScannerEngine: Analysis progress:   9% (5/53 files)
+[INFO]  ScannerEngine: Analysis progress:  18% (10/53 files)
+[INFO]  ScannerEngine: Analysis progress:  28% (15/53 files)
+[INFO]  ScannerEngine: Analysis progress:  37% (20/53 files)
+[INFO]  ScannerEngine: Analysis progress:  47% (25/53 files)
+[INFO]  ScannerEngine: Analysis progress:  56% (30/53 files)
+[INFO]  ScannerEngine: Analysis progress:  66% (35/53 files)
+[INFO]  ScannerEngine: Analysis progress:  75% (40/53 files)
+[INFO]  ScannerEngine: Analysis progress:  84% (45/53 files)
+[INFO]  ScannerEngine: Analysis progress:  94% (50/53 files)
+[INFO]  ScannerEngine: Sensor JsSecuritySensorV2 [jasmin] (done) | time=102642ms
+[INFO]  ScannerEngine: Sensor JsArchitectureSensor [architecture]
+[INFO]  ScannerEngine: Found 1 potential Udg file location(s) for "js" in "/Users/idaliopessoa/dev/gospelviral/.scannerwork"
+[INFO]  ScannerEngine: - /Users/idaliopessoa/dev/gospelviral/.scannerwork/architecture/js
+[INFO]  ScannerEngine: Architecture analysis is enabled with the following features: legacy, discovery, flaws, smells, deviations, directives
+[INFO]  ScannerEngine: * Protobuf reading starting | memory total=616 | free=121 | used=494 (MB)
+[INFO]  ScannerEngine: * Reading SonarArchitecture UDG data from directory "/Users/idaliopessoa/dev/gospelviral/.scannerwork/architecture/js"
+[INFO]  ScannerEngine: * Files successfully loaded: "94" out of "94"
+[INFO]  ScannerEngine: * Purging externals (components not scanned) from graphs
+[INFO]  ScannerEngine: * Purging excluded nodes from graphs
+[INFO]  ScannerEngine: * Protobuf reading complete | memory total=616 | free=109 | used=506 (MB)
+[INFO]  ScannerEngine: * Build architecture.graph.js.file_graph.default_perspective hierarchy graph complete (filtered=false) | memory total=616 | free=83 | used=532 (MB)
+[INFO]  ScannerEngine: * No intended architecture defined or detected, using an empty model
+[INFO]  ScannerEngine: No directives configured
+[INFO]  ScannerEngine: Sensor JsArchitectureSensor [architecture] (done) | time=484ms
+[INFO]  ScannerEngine: Sensor Zero Coverage Sensor
+[INFO]  ScannerEngine: Sensor Zero Coverage Sensor (done) | time=2ms
+[INFO]  ScannerEngine: Sensor Architecture Telemetry [architecture]
+[INFO]  ScannerEngine: Sensor Architecture Telemetry [architecture] (done) | time=0ms
+[INFO]  ScannerEngine: ------------- Gather SCA dependencies on project
+[INFO]  ScannerEngine: Dependency analysis skipped
+[INFO]  ScannerEngine: CPD Executor 7 files had no CPD blocks
+[INFO]  ScannerEngine: CPD Executor Calculating CPD for 47 files
+[INFO]  ScannerEngine: CPD Executor CPD calculation finished (done) | time=30ms
+[INFO]  ScannerEngine: SCM Publisher SCM provider for this project is: git
+[INFO]  ScannerEngine: SCM Publisher 95 source files to be analyzed
+[INFO]  ScannerEngine: SCM Publisher 95/95 source files have been analyzed (done) | time=3599ms
+[INFO]  ScannerEngine: SCM revision ID 'e907b8db46179994b88881ca3cd3b0d3cc8fc64b'
+[INFO]  ScannerEngine: Analysis report generated in 377ms, dir size=877 KB
+[INFO]  ScannerEngine: Analysis report compressed in 317ms, zip size=356 KB
+[INFO]  ScannerEngine: Analysis report uploaded in 1295ms
+[INFO]  ScannerEngine: ANALYSIS SUCCESSFUL, you can find the results at: https://sonarcloud.io/dashboard?id=idaliopessoa_gospelviral
+[INFO]  ScannerEngine: Note that you will be able to access the updated dashboard once the server has processed the submitted analysis report
+[INFO]  ScannerEngine: More about the report processing at https://sonarcloud.io/api/ce/task?id=AZ5v9k_79j5kDN4oTrnp
+[INFO]  ScannerEngine: Successfully sent architecture data
+[INFO]  ScannerEngine: ------------- Upload SCA dependency files
+[INFO]  ScannerEngine: Sensor cache published successfully
+[INFO]  ScannerEngine: Analysis total time: 2:24.338 s
+[INFO]  ScannerEngine: SonarScanner Engine completed successfully
