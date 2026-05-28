@@ -253,6 +253,33 @@ describe('runViaCli', () => {
     ).rejects.toMatchObject({ name: 'AbortError' });
   });
 
+  it('strips ANTHROPIC_API_KEY from the child env (CLI rides OAuth, not the env key)', async () => {
+    // Arrange — server export may carry an intentionally-invalid key.
+    // The child must inherit a sanitized env or claude CLI exits 1.
+    const ORIGINAL = process.env.ANTHROPIC_API_KEY;
+    process.env.ANTHROPIC_API_KEY = 'sk-ant-INVALID-LEAK-CHECK';
+    try {
+      const spawnImpl = makeSpawnImpl({ happyPath: true });
+
+      // Act
+      await runViaCli({ ...BASE_ARGS, spawnImpl });
+
+      // Assert — analyze spawn call passes env without ANTHROPIC_API_KEY
+      const analyzeCall = spawnImpl.mock.calls.find(
+        ([, args]) => args.includes('--output-format'),
+      );
+      expect(analyzeCall).toBeDefined();
+      const options = analyzeCall[2];
+      expect(options).toBeDefined();
+      expect(options.env).toBeDefined();
+      expect(options.env.ANTHROPIC_API_KEY).toBeUndefined();
+      expect(Object.prototype.hasOwnProperty.call(options.env, 'ANTHROPIC_API_KEY')).toBe(false);
+    } finally {
+      if (ORIGINAL === undefined) delete process.env.ANTHROPIC_API_KEY;
+      else process.env.ANTHROPIC_API_KEY = ORIGINAL;
+    }
+  });
+
   it('accepts maxTokens for API parity (CLI ignores it; no spawn arg emitted)', async () => {
     // Arrange
     const spawnImpl = makeSpawnImpl({ happyPath: true });
