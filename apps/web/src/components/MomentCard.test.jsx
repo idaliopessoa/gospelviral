@@ -1,0 +1,169 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import MomentCard from './MomentCard.jsx';
+import { EXAMPLE_RESPONSE } from '@gospelviral/shared';
+
+const MOMENT = EXAMPLE_RESPONSE.top_moments[0];
+
+const SUB = {
+  font: 'IBM Plex Sans',
+  textColor: '#ffffff',
+  background: 'shadow',
+  bgColor: '#000000',
+  position: 'bottom',
+  size: 'M',
+  charsPerScreen: 28,
+  lines: 2,
+  highlightScripture: true,
+  highlightKeywords: true,
+  x: 0,
+  y: 0,
+};
+
+beforeEach(() => {
+  Element.prototype.getBoundingClientRect = vi.fn().mockReturnValue({
+    width: 280,
+    height: 498,
+    top: 0,
+    left: 0,
+    right: 280,
+    bottom: 498,
+    x: 0,
+    y: 0,
+    toJSON: () => ({}),
+  });
+  Element.prototype.setPointerCapture = vi.fn();
+  Element.prototype.releasePointerCapture = vi.fn();
+});
+
+describe('MomentCard', () => {
+  it('renders the moment hook title, viral score and caption text', () => {
+    // Arrange + Act
+    const { container } = render(
+      <MomentCard
+        moment={MOMENT}
+        videoId="abc123"
+        subtitleConfig={SUB}
+        videoConfig={{ x: 0, y: 0, scale: 1 }}
+        overlayConfig={{ dataURL: null, opacity: 1, filename: null }}
+        index={0}
+      />,
+    );
+
+    // Assert
+    expect(screen.getByText(MOMENT.hook_title)).toBeInTheDocument();
+    expect(screen.getByText('8.7')).toBeInTheDocument();
+    expect(container.textContent).toContain('Três horas da manhã. Chão do quarto.');
+    expect(container.textContent).toContain(MOMENT.cta.primary);
+  });
+
+  it('renders hashtags split into individual tags', () => {
+    // Arrange + Act
+    const { container } = render(
+      <MomentCard
+        moment={MOMENT}
+        videoId="abc123"
+        subtitleConfig={SUB}
+        videoConfig={{ x: 0, y: 0, scale: 1 }}
+        overlayConfig={{ dataURL: null, opacity: 1, filename: null }}
+        index={0}
+      />,
+    );
+
+    // Assert — every hashtag from the fixture appears as its own pill
+    const expected = MOMENT.hashtags.all.split(' ').filter(Boolean);
+    for (const tag of expected) {
+      expect(container.textContent).toContain(tag);
+    }
+  });
+
+  it('marks the moment as cold open when cold_open_analysis.decision === "apply_cold_open"', () => {
+    // Arrange + Act
+    render(
+      <MomentCard
+        moment={MOMENT}
+        videoId="abc123"
+        subtitleConfig={SUB}
+        videoConfig={{ x: 0, y: 0, scale: 1 }}
+        overlayConfig={{ dataURL: null, opacity: 1, filename: null }}
+        index={0}
+      />,
+    );
+
+    // Assert — at least one Cold open badge present
+    expect(screen.getAllByText(/Cold open/).length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('formats the YouTube deep-link with start-second offset', () => {
+    // Arrange + Act
+    render(
+      <MomentCard
+        moment={MOMENT}
+        videoId="abc123"
+        subtitleConfig={SUB}
+        videoConfig={{ x: 0, y: 0, scale: 1 }}
+        overlayConfig={{ dataURL: null, opacity: 1, filename: null }}
+        index={0}
+      />,
+    );
+
+    // Assert — moment 1 starts at 01:08 = 68 s
+    const link = screen.getByRole('link', { name: /ver no YouTube/ });
+    expect(link).toHaveAttribute('href', 'https://youtube.com/watch?v=abc123&t=68s');
+  });
+
+  it('renders a red-flag badge when theological_check.red_flags is non-empty and != "nenhuma"', () => {
+    // Arrange
+    const flagged = {
+      ...MOMENT,
+      theological_check: { ...MOMENT.theological_check, red_flags: ['heresia'] },
+    };
+
+    // Act
+    render(
+      <MomentCard
+        moment={flagged}
+        videoId="abc123"
+        subtitleConfig={SUB}
+        videoConfig={{ x: 0, y: 0, scale: 1 }}
+        overlayConfig={{ dataURL: null, opacity: 1, filename: null }}
+        index={0}
+      />,
+    );
+
+    // Assert
+    expect(screen.getByText(/Red flag/)).toBeInTheDocument();
+  });
+
+  it('tolerates score_breakdown entries as raw numbers (getScore fallback)', () => {
+    // Arrange
+    const flat = {
+      ...MOMENT,
+      score_breakdown: {
+        emotional_resonance: 7.5,
+        information_value: 8,
+        story_quality: 6,
+        shareability: 7,
+        controversy_potential: 3,
+        hook_strength: 9,
+      },
+    };
+
+    // Act — should not throw
+    expect(() =>
+      render(
+        <MomentCard
+          moment={flat}
+          videoId="abc123"
+          subtitleConfig={SUB}
+          videoConfig={{ x: 0, y: 0, scale: 1 }}
+          overlayConfig={{ dataURL: null, opacity: 1, filename: null }}
+          index={1}
+        />,
+      ),
+    ).not.toThrow();
+
+    // Assert — the 7.5 raw number rendered as 7.5
+    expect(screen.getAllByText('7.5').length).toBeGreaterThan(0);
+  });
+});
