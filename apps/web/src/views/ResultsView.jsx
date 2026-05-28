@@ -59,6 +59,7 @@ function ResultsHeader({ results }) {
 export default function ResultsView({
   results,
   videoId,
+  transcript,
   subtitleConfig,
   setSubtitleConfig,
   videoConfig,
@@ -67,6 +68,8 @@ export default function ResultsView({
   setOverlayConfig,
   activeTab,
   setActiveTab,
+  activeCardTab,
+  setActiveCardTab,
   isCollapsed,
   setIsCollapsed,
 }) {
@@ -91,11 +94,14 @@ export default function ResultsView({
             key={`${moment.rank ?? i}-${moment.hook_title}`}
             moment={moment}
             videoId={videoId}
+            transcript={transcript}
             subtitleConfig={subtitleConfig}
             videoConfig={videoConfig}
             overlayConfig={overlayConfig}
             onVideoConfigChange={setVideoConfig}
             onSubtitleConfigChange={setSubtitleConfig}
+            activeCardTab={activeCardTab}
+            onActiveCardTabChange={setActiveCardTab}
             index={i}
           />
         ))}
