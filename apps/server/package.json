@@ -7,6 +7,7 @@
     "dev": "node --watch src/server.js",
     "start": "node src/server.js",
     "build": "echo 'no build step (node esm)'",
+    "smoke:api": "node scripts/smoke-api.js",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "lint": "eslint src"
