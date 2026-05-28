@@ -44,3 +44,6 @@ Thumbs.db
 *.pid
 *.pid.lock
 *.seed
+
+# Video upload temp dir (Phase 4)
+apps/server/.tmp/
