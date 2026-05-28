@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { analyzeMoments } from '../lib/api.js';
 import { extractVideoId } from '../lib/helpers.js';
 
@@ -17,30 +17,40 @@ function validateInput(url, transcript) {
  * - validates inputs synchronously
  * - flips to "analyzing" while the api call runs
  * - on success returns to "results"; on failure goes back to "input" with an error
+ * - reset() aborts the in-flight request via AbortController
  *
  * @param {(client: typeof analyzeMoments) => typeof analyzeMoments} [clientFactory]
- *   Override for tests. Defaults to the real placeholder client.
+ *   Override for tests. Defaults to the real client.
  */
 export function useAnalyze(clientFactory = (c) => c) {
   const [view, setView] = useState('input');
   const [results, setResults] = useState(null);
   const [error, setError] = useState(null);
+  const abortRef = useRef(null);
 
   const client = clientFactory(analyzeMoments);
 
-  async function analyze({ url, transcript }) {
+  async function analyze({ url, transcript, mode, model }) {
     setError(null);
     const validationError = validateInput(url, transcript);
     if (validationError) {
       setError(validationError);
       return;
     }
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
     setView('analyzing');
     try {
-      const response = await client({ url, transcript });
+      const response = await client(
+        { url, transcript, mode, model },
+        { signal: controller.signal },
+      );
+      if (controller.signal.aborted) return;
       setResults(response);
       setView('results');
     } catch (e) {
+      if (e?.name === 'AbortError') return;
       setError(`Falha na análise: ${e.message}`);
       setView('input');
     }
@@ -52,6 +62,8 @@ export function useAnalyze(clientFactory = (c) => c) {
   }
 
   function reset() {
+    abortRef.current?.abort();
+    abortRef.current = null;
     setView('input');
     setResults(null);
     setError(null);

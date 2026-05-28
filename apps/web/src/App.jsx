@@ -11,17 +11,19 @@ import {
 } from './config/defaults.js';
 import { useAnalyze } from './hooks/useAnalyze.js';
 import { useLoadingRotation } from './hooks/useLoadingRotation.js';
+import { useRuntime } from './hooks/useRuntime.js';
 import InputView from './views/InputView.jsx';
 import AnalyzingView from './views/AnalyzingView.jsx';
 import ResultsView from './views/ResultsView.jsx';
+import ModeBadge from './components/ModeBadge.jsx';
 
-function Header({ showBack, onBack }) {
+function Header({ showBack, onBack, badge }) {
   return (
     <header className="border-b border-stone-300 bg-stone-50">
-      <div className="max-w-7xl mx-auto px-6 py-5 flex items-center justify-between">
-        <div className="flex items-baseline gap-3">
+      <div className="max-w-7xl mx-auto px-6 py-5 flex items-center justify-between gap-3">
+        <div className="flex items-baseline gap-3 min-w-0">
           <div
-            className="text-2xl tracking-tight"
+            className="text-2xl tracking-tight truncate"
             style={{ fontFamily: "'Instrument Serif', serif" }}
           >
             Momentos Virais<span className="italic text-stone-400"> · cristão</span>
@@ -33,15 +35,18 @@ function Header({ showBack, onBack }) {
             Análise de pregações para Reels & Shorts
           </div>
         </div>
-        {showBack && (
-          <button
-            onClick={onBack}
-            className="inline-flex items-center gap-2 text-xs px-3 py-1.5 border border-stone-300 hover:border-stone-900 hover:bg-stone-900 hover:text-stone-50 transition-colors rounded-sm"
-            style={{ fontFamily: "'IBM Plex Sans', sans-serif" }}
-          >
-            <ArrowLeft size={12} /> Nova análise
-          </button>
-        )}
+        <div className="flex items-center gap-3 shrink-0">
+          {badge}
+          {showBack && (
+            <button
+              onClick={onBack}
+              className="inline-flex items-center gap-2 text-xs px-3 py-1.5 border border-stone-300 hover:border-stone-900 hover:bg-stone-900 hover:text-stone-50 transition-colors rounded-sm"
+              style={{ fontFamily: "'IBM Plex Sans', sans-serif" }}
+            >
+              <ArrowLeft size={12} /> Nova análise
+            </button>
+          )}
+        </div>
       </div>
     </header>
   );
@@ -68,6 +73,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('subtitle');
   const [isConfigCollapsed, setIsConfigCollapsed] = useState(false);
 
+  const runtime = useRuntime();
   const { view, results, error, analyze, showExample, reset } = useAnalyze();
   const videoId = useMemo(
     () => exampleVideoId || extractVideoId(url),
@@ -91,9 +97,23 @@ export default function App() {
     reset();
   }
 
+  function handleAnalyze() {
+    analyze({ url, transcript, mode: runtime.forcedMode });
+  }
+
+  const badge = (
+    <ModeBadge
+      currentMode={runtime.currentMode}
+      forcedMode={runtime.forcedMode}
+      setForcedMode={runtime.setForcedMode}
+      refresh={runtime.refresh}
+      loading={runtime.loading}
+    />
+  );
+
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#F5F1EA' }}>
-      <Header showBack={view === 'results'} onBack={handleReset} />
+      <Header showBack={view === 'results'} onBack={handleReset} badge={badge} />
 
       {view === 'input' && (
         <InputView
@@ -102,7 +122,7 @@ export default function App() {
           transcript={transcript}
           setTranscript={setTranscript}
           videoId={videoId}
-          onAnalyze={() => analyze({ url, transcript })}
+          onAnalyze={handleAnalyze}
           onLoadExample={loadExample}
           error={error}
         />
