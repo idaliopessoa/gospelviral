@@ -158,6 +158,5 @@ Ordem de execução recomendada: 3 → 4 → 5 → 6, com gate humano entre cada
 Antes do Pass 1 da Fase 3, confirme que entendeu:
 1. Este documento é produto, não implementação — você decompõe em tasks lendo o código real, usando `01` (persona) e `02` (protocolo).
 2. A ordem é 3 → 4 → 5 → 6, uma fase por vez, registry revisado por humano antes do Pass 2, gate humano entre fases.
-3. As DECs marcadas como "firme" no documento são invioláveis.
 
 Comece pelo Pass 1 da **Fase 3**: decomponha em tasks, atualize o registry a partir de TASK_013, e apresente para revisão humana. Não escreva código ainda.
