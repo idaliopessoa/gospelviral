@@ -1,8 +1,8 @@
 /**
  * Frozen snapshot of the artifact's `fullPrompt` composition for the
  * EXAMPLE_TRANSCRIPT input. Pin point for build-user-message.js so the
- * archival of viral-cristao-artifact.jsx in TASK_012 cannot drift the
- * server-side userMessage shape.
+ * archived reference (`reference/viral-cristao-artifact.jsx`) cannot
+ * drift the server-side userMessage shape.
  *
  * The artifact composes:
  *   `${OPTIMIZED_PROMPT}\n\n${userMessage}`

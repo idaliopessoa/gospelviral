@@ -11,7 +11,7 @@ export default [
       '**/coverage/**',
       '**/.vite/**',
       '**/.scannerwork/**',
-      'viral-cristao-artifact.jsx',
+      'reference/**',
     ],
   },
   js.configs.recommended,
