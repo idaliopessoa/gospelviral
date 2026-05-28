@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { OPTIMIZED_PROMPT } from '@gospelviral/shared';
+import { OPTIMIZED_PROMPT, AnalysisResponseError } from '@gospelviral/shared';
 import { runViaApi as defaultRunViaApi } from '../runtime/claude-api.js';
 import { runViaCli as defaultRunViaCli } from '../runtime/claude-cli.js';
 import { detectRuntime as defaultDetectRuntime } from '../runtime/detect.js';
@@ -12,7 +12,6 @@ import {
   AdapterTransportError,
   AdapterTimeoutError,
 } from '../runtime/errors.js';
-import { AnalysisResponseError } from '@gospelviral/shared';
 
 function err(code, message, status) {
   return { body: { status: 'error', code, message }, status };
