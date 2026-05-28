@@ -1,0 +1,65 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Google Fonts @import — preserved verbatim from the artifact so the load
+ * order (Instrument Serif → IBM Plex Sans → IBM Plex Mono → Inter Tight →
+ * Manrope → Bebas Neue → Anton → Archivo Black) matches by character.
+ * Per DEC: blocking first paint is an acceptable Pass-1 cost; promoting to
+ * <link rel="preload"> is a ROADMAP item.
+ */
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Inter+Tight:wght@500;700&family=Manrope:wght@500;700;800&family=Bebas+Neue&family=Anton&family=Archivo+Black&display=swap');
+
+:root {
+  font-family: 'IBM Plex Sans', sans-serif;
+}
+
+body {
+  margin: 0;
+  background-color: #f5f1ea;
+  font-family: 'IBM Plex Sans', sans-serif;
+}
+
+details > summary::-webkit-details-marker {
+  display: none;
+}
+
+/*
+ * Fixed canvas dimensions in pure CSS to dodge Tailwind arbitrary-value
+ * compilation issues observed in the artifact host. In Vite + Tailwind JIT
+ * these would compile, but the CSS-puro fallback stays as defense-in-depth.
+ * — verbatim from viral-cristao-artifact.jsx
+ */
+.canvas-9-16 {
+  width: 280px;
+  height: 498px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.video-16-9 {
+  width: 280px;
+  height: 158px;
+}
+.canvas-width-only {
+  width: 280px;
+  margin-left: auto;
+  margin-right: auto;
+}
+@media (min-width: 768px) {
+  .canvas-9-16 {
+    width: 340px;
+    height: 604px;
+    margin-left: 0;
+    margin-right: 0;
+  }
+  .video-16-9 {
+    width: 340px;
+    height: 191px;
+  }
+  .canvas-width-only {
+    width: 340px;
+    margin-left: 0;
+    margin-right: 0;
+  }
+}
