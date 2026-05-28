@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { app } from './server.js';
 
 describe('scaffold: server', () => {
-  it('healthz returns 200 ok', async () => {
+  it('healthz returns 200 with status + version envelope', async () => {
     // Arrange
     const req = new Request('http://localhost/healthz');
 
@@ -12,7 +12,8 @@ describe('scaffold: server', () => {
 
     // Assert
     expect(res.status).toBe(200);
-    expect(body).toEqual({ ok: true });
+    expect(body.status).toBe('ok');
+    expect(typeof body.version).toBe('string');
   });
 
   it('imports @gospelviral/shared cleanly', async () => {
