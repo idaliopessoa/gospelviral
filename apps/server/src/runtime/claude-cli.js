@@ -146,18 +146,20 @@ export async function runViaCli({
     }
 
     if (exit.code !== 0) {
-      const stderr = readStderr();
+      const stderrText = readStderr();
+      const stderrSnippet = stderrText ? ` stderr: ${stderrText.slice(0, 240)}` : '';
       throw new AdapterTransportError(
         'cli_nonzero_exit',
-        `Claude CLI exited with code ${exit.code}. ${stderr ? `stderr: ${stderr.slice(0, 240)}` : ''}`.trim(),
+        `Claude CLI exited with code ${exit.code}.${stderrSnippet}`,
         { status: exit.code },
       );
     }
 
     if (errorEvent) {
+      const subtype = typeof errorEvent.subtype === 'string' ? errorEvent.subtype : 'unknown';
       throw new AdapterTransportError(
         'cli_error_event',
-        `Claude CLI emitted an error event (subtype=${errorEvent.subtype ?? 'unknown'}).`,
+        `Claude CLI emitted an error event (subtype=${subtype}).`,
       );
     }
 
