@@ -71,6 +71,7 @@ export default function App() {
   const [videoConfig, setVideoConfig] = useState(initialPresets.videoConfig);
   const [overlayConfig, setOverlayConfig] = useState(initialPresets.overlayConfig);
   const [activeTab, setActiveTab] = useState('subtitle');
+  const [activeCardTab, setActiveCardTab] = useState('redes-sociais');
   const [isConfigCollapsed, setIsConfigCollapsed] = useState(
     initialPresets.isConfigCollapsed,
   );
@@ -143,6 +144,7 @@ export default function App() {
         <ResultsView
           results={results}
           videoId={videoId}
+          transcript={transcript}
           subtitleConfig={subtitleConfig}
           setSubtitleConfig={setSubtitleConfig}
           videoConfig={videoConfig}
@@ -151,6 +153,8 @@ export default function App() {
           setOverlayConfig={setOverlayConfig}
           activeTab={activeTab}
           setActiveTab={setActiveTab}
+          activeCardTab={activeCardTab}
+          setActiveCardTab={setActiveCardTab}
           isCollapsed={isConfigCollapsed}
           setIsCollapsed={setIsConfigCollapsed}
         />

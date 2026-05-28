@@ -60,4 +60,27 @@ describe('App', () => {
     );
     expect(screen.queryByText('Resultado da análise')).not.toBeInTheDocument();
   });
+
+  it('clicking "Legenda do Vídeo" tab on one card switches all 5 cards (global lift)', () => {
+    // Arrange — example load brings 5 moments into the results view
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: /Ver exemplo pronto/ }));
+
+    // Initial state: 5 "Redes Sociais" tabs selected, 5 "Legenda do Vídeo" tabs unselected
+    const initialRedes = screen.getAllByRole('tab', { name: /Redes Sociais/ });
+    const initialLegenda = screen.getAllByRole('tab', { name: /Legenda do Vídeo/ });
+    expect(initialRedes).toHaveLength(5);
+    expect(initialLegenda).toHaveLength(5);
+    for (const t of initialRedes) expect(t).toHaveAttribute('aria-selected', 'true');
+    for (const t of initialLegenda) expect(t).toHaveAttribute('aria-selected', 'false');
+
+    // Act — click Legenda tab on the FIRST card only
+    fireEvent.click(initialLegenda[0]);
+
+    // Assert — ALL five cards now show Legenda as selected (proves global lift)
+    const afterRedes = screen.getAllByRole('tab', { name: /Redes Sociais/ });
+    const afterLegenda = screen.getAllByRole('tab', { name: /Legenda do Vídeo/ });
+    for (const t of afterRedes) expect(t).toHaveAttribute('aria-selected', 'false');
+    for (const t of afterLegenda) expect(t).toHaveAttribute('aria-selected', 'true');
+  });
 });
