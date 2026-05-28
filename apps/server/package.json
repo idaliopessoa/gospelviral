@@ -9,6 +9,7 @@
     "build": "echo 'no build step (node esm)'",
     "smoke:api": "node scripts/smoke-api.js",
     "smoke:cli": "node scripts/smoke-cli.js",
+    "smoke:heap": "node --expose-gc scripts/smoke-heap.js",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "lint": "eslint src"
