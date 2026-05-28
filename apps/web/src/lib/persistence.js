@@ -84,10 +84,49 @@ export function loadVisualPresets() {
 
   const stored = parsed.presets ?? {};
   return {
-    subtitleConfig: { ...DEFAULT_SUBTITLE_CONFIG, ...(stored.subtitleConfig ?? {}) },
-    videoConfig: { ...DEFAULT_VIDEO_CONFIG, ...(stored.videoConfig ?? {}) },
+    subtitleConfig: { ...DEFAULT_SUBTITLE_CONFIG, ...stored.subtitleConfig },
+    videoConfig: { ...DEFAULT_VIDEO_CONFIG, ...stored.videoConfig },
     overlayConfig: stripDataURL(stored.overlayConfig),
     isConfigCollapsed: Boolean(stored.isConfigCollapsed),
+  };
+}
+
+const ALLOWED_SUBTITLE_KEYS = Object.freeze(Object.keys(DEFAULT_SUBTITLE_CONFIG));
+
+function clampOpacity(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return 1;
+  return Math.max(0, Math.min(1, n));
+}
+
+/**
+ * Reduce a user-controlled presets object to a schema-strict snapshot.
+ * Coerces every field to the expected type before it touches localStorage so
+ * the write surface is impossible to taint with arbitrary values (defense
+ * against jssecurity:S8475 — even though the storage is same-origin, this
+ * keeps the on-disk shape predictable for any future migration code).
+ */
+function sanitizeForPersistence(presets) {
+  const sub = presets?.subtitleConfig ?? {};
+  const safeSub = {};
+  for (const key of ALLOWED_SUBTITLE_KEYS) {
+    safeSub[key] = sub[key] ?? DEFAULT_SUBTITLE_CONFIG[key];
+  }
+  const video = presets?.videoConfig ?? {};
+  const safeVideo = {
+    x: Number(video.x) || 0,
+    y: Number(video.y) || 0,
+    scale: Number.isFinite(Number(video.scale)) ? Number(video.scale) : 1,
+  };
+  return {
+    subtitleConfig: safeSub,
+    videoConfig: safeVideo,
+    overlayConfig: {
+      dataURL: null,
+      opacity: clampOpacity(presets?.overlayConfig?.opacity),
+      filename: null,
+    },
+    isConfigCollapsed: Boolean(presets?.isConfigCollapsed),
   };
 }
 
@@ -107,15 +146,10 @@ function flushPending(storage) {
   if (!pendingValue) return;
   const value = pendingValue;
   pendingValue = null;
-  const safeOverlay = stripDataURL(value.overlayConfig);
+  const safe = sanitizeForPersistence(value);
   const payload = JSON.stringify({
     schemaVersion: CURRENT_SCHEMA_VERSION,
-    presets: {
-      subtitleConfig: value.subtitleConfig,
-      videoConfig: value.videoConfig,
-      overlayConfig: safeOverlay,
-      isConfigCollapsed: Boolean(value.isConfigCollapsed),
-    },
+    presets: safe,
   });
   try {
     storage.setItem(STORAGE_KEY, payload);

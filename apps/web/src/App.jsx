@@ -66,7 +66,7 @@ export default function App() {
   // useState lazy-initializer: loadVisualPresets is called exactly once on
   // first render, then the result feeds React state for the rest of the
   // session. Subsequent edits trigger writes through useVisualPresetsPersistence.
-  const initialPresets = useState(loadVisualPresets)[0];
+  const [initialPresets] = useState(loadVisualPresets);
   const [subtitleConfig, setSubtitleConfig] = useState(initialPresets.subtitleConfig);
   const [videoConfig, setVideoConfig] = useState(initialPresets.videoConfig);
   const [overlayConfig, setOverlayConfig] = useState(initialPresets.overlayConfig);
