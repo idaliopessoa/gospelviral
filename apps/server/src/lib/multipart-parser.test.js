@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { Readable } from 'node:stream';
-import { parseMultipartUpload, MultipartError } from './multipart-parser.js';
+import { parseMultipartUpload } from './multipart-parser.js';
 
 /**
  * Build a multipart-encoded Node Readable from a FormData payload using
