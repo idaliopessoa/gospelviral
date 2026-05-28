@@ -9,7 +9,7 @@ export function extractVideoId(url) {
     /youtube\.com\/shorts\/([^&\n?#]+)/,
   ];
   for (const p of patterns) {
-    const m = url.match(p);
+    const m = p.exec(url);
     if (m) return m[1];
   }
   return null;

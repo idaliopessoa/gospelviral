@@ -63,10 +63,10 @@ export const EXAMPLE_RESPONSE = {
       viral_score: 8.7,
       score_breakdown: {
         emotional_resonance: { score: 9.8, notes: "Vulnerabilidade extrema (chão do quarto às 3h da manhã) + encontro divino palpável + transformação visível" },
-        information_value: { score: 8.0, notes: "Quebrantamento como convite, não castigo — verdade libertadora" },
+        information_value: { score: 8, notes: "Quebrantamento como convite, não castigo — verdade libertadora" },
         story_quality: { score: 9.5, notes: "Arco perfeito: crise → clamor → resposta divina → transformação. Deus como herói." },
         shareability: { score: 9.2, notes: "Ansiedade e crise existencial são universais — não-cristãos se identificam" },
-        controversy_potential: { score: 4.0, notes: "Testemunho sincero, baixa controvérsia" },
+        controversy_potential: { score: 4, notes: "Testemunho sincero, baixa controvérsia" },
         hook_strength: { score: 9.5, notes: "3h da manhã + chão do quarto + oração desesperada = imagem thumb-stopper" }
       },
       theological_check: {
@@ -111,11 +111,11 @@ export const EXAMPLE_RESPONSE = {
       content_purpose: "evangelization",
       viral_score: 8.2,
       score_breakdown: {
-        emotional_resonance: { score: 9.0, notes: "Honestidade rara: pastor admitindo briga com Deus, dúvida, choro" },
-        information_value: { score: 8.0, notes: "Verdade contra-intuitiva: fidelidade de Deus não depende do resultado" },
+        emotional_resonance: { score: 9, notes: "Honestidade rara: pastor admitindo briga com Deus, dúvida, choro" },
+        information_value: { score: 8, notes: "Verdade contra-intuitiva: fidelidade de Deus não depende do resultado" },
         story_quality: { score: 8.5, notes: "Arco com tensão real (câncer) + descoberta + resolução" },
-        shareability: { score: 8.0, notes: "Sofrimento e fé com dúvidas são experiências amplas" },
-        controversy_potential: { score: 6.0, notes: "Admitir briga com Deus pode soar problemático para alguns cristãos legalistas" },
+        shareability: { score: 8, notes: "Sofrimento e fé com dúvidas são experiências amplas" },
+        controversy_potential: { score: 6, notes: "Admitir briga com Deus pode soar problemático para alguns cristãos legalistas" },
         hook_strength: { score: 8.5, notes: "'Câncer + briga com Deus' = pattern interrupt forte" }
       },
       theological_check: {
@@ -160,11 +160,11 @@ export const EXAMPLE_RESPONSE = {
       content_purpose: "evangelization",
       viral_score: 7.9,
       score_breakdown: {
-        emotional_resonance: { score: 8.0, notes: "Conforto profundo em meio à dor" },
-        information_value: { score: 9.0, notes: "Insight contra-intuitivo: Deus promete presença, não ausência do vale" },
-        story_quality: { score: 6.0, notes: "Mais reflexão que história" },
-        shareability: { score: 9.0, notes: "'Presença no vale, não ausência do vale' é altamente citável" },
-        controversy_potential: { score: 5.0, notes: "Refuta sutilmente a teologia da prosperidade" },
+        emotional_resonance: { score: 8, notes: "Conforto profundo em meio à dor" },
+        information_value: { score: 9, notes: "Insight contra-intuitivo: Deus promete presença, não ausência do vale" },
+        story_quality: { score: 6, notes: "Mais reflexão que história" },
+        shareability: { score: 9, notes: "'Presença no vale, não ausência do vale' é altamente citável" },
+        controversy_potential: { score: 5, notes: "Refuta sutilmente a teologia da prosperidade" },
         hook_strength: { score: 8.5, notes: "Quebra de expectativa: 'Deus não promete tirar você do vale'" }
       },
       theological_check: {
@@ -209,11 +209,11 @@ export const EXAMPLE_RESPONSE = {
       content_purpose: "edification",
       viral_score: 7.5,
       score_breakdown: {
-        emotional_resonance: { score: 6.0, notes: "Mais didático, menor carga emocional" },
+        emotional_resonance: { score: 6, notes: "Mais didático, menor carga emocional" },
         information_value: { score: 9.5, notes: "Diagnóstico claro de dois erros teológicos comuns" },
         story_quality: { score: 5.5, notes: "Conceito, não narrativa" },
         shareability: { score: 8.5, notes: "Cristãos vão se identificar e marcar amigos" },
-        controversy_potential: { score: 7.0, notes: "Marca posição teológica sobre graça vs lei" },
+        controversy_potential: { score: 7, notes: "Marca posição teológica sobre graça vs lei" },
         hook_strength: { score: 8.5, notes: "'Dois erros graves' cria gancho forte" }
       },
       theological_check: {
@@ -258,10 +258,10 @@ export const EXAMPLE_RESPONSE = {
       content_purpose: "edification",
       viral_score: 7.2,
       score_breakdown: {
-        emotional_resonance: { score: 5.0, notes: "Conteúdo didático, baixa carga emocional" },
+        emotional_resonance: { score: 5, notes: "Conteúdo didático, baixa carga emocional" },
         information_value: { score: 9.5, notes: "Distinção teológica fundamental clarificada" },
-        story_quality: { score: 5.0, notes: "Conceito, não história" },
-        shareability: { score: 9.0, notes: "Cristãos em crescimento amam essa clareza" },
+        story_quality: { score: 5, notes: "Conceito, não história" },
+        shareability: { score: 9, notes: "Cristãos em crescimento amam essa clareza" },
         controversy_potential: { score: 6.5, notes: "Pode gerar debate denominacional sobre santificação" },
         hook_strength: { score: 8.5, notes: "'A diferença que muda tudo' funciona bem" }
       },
