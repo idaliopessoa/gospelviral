@@ -1,6 +1,6 @@
 # Task Registry
-timestamp: 2026-05-27T00:00:00Z
-version: 1.0
+timestamp: 2026-05-28T00:00:00Z
+version: 1.2
 
 ## Overview
 
@@ -143,6 +143,16 @@ Architectural decisions promised by tasks land in `memory_bank/decisions/DEC_XXX
 - **File**: task_012_docs_rewrite.md
 - **Depends on**: TASK_010, TASK_011
 
+### TASK_013: Card Tabs — Redes Sociais / Legenda do Vídeo
+- **Status**: Ready
+- **Interface**: INPUT[`bootstrap-features-fases-3-6.md` §Fase 3, current `MomentCard.jsx` right column, `App.jsx` `transcript` state, `timestampToSeconds` from `lib/helpers.js`] → OUTPUT[`apps/web/src/lib/transcript-extract.js` (`extractSegmentText` pure helper) + `apps/web/src/components/CardTabs.jsx` (generic, **stateless / controlled** slot-based tabs) + `MomentCard.jsx` refactor (fixed-top: hook/scripture; tabs: Redes Sociais default + Legenda do Vídeo; score `<details>` stays below tabs) + prop threading `App → ResultsView → MomentCard` for `transcript`, `activeCardTab`, `setActiveCardTab` + integration spec pinning global lift + Vitest suites]
+- **Confidence**: HIGH
+- **Black Box**: Right column of `MomentCard` reorganized into fixed metadata top + two tabs. Helper slices transcript by moment range deterministically (no IA, frontend-only). **Tab state (`activeCardTab`) is GLOBAL, owned by `App.jsx`** — one click flips all 5 cards together; same coherence as the existing global visual prefs.
+- **Phase**: 3
+- **Prerequisites**: ✅ P1+P2+P3 included
+- **File**: task_013_card_tabs.md
+- **Depends on**: TASK_010 (transcript already flows end-to-end)
+
 ## Task Creation Log
 2026-05-27 TASK_001..TASK_012 created — Pass 1 high-level plan, awaiting human review before Pass 2 decomposition per task.
 2026-05-27 Registry refined: DEC folder convention recorded; TASK_007 dependency widened to include TASK_006; TASK_001 GitFlow special-cased for `main`→`develop` bootstrap; TASK_004 visual-parity gate clarified as human-only (Playwright snapshot deferred); TASK_011 schema-versioning + migration-safety invariants tightened; "viral-cristao-artifact.jsx byte-identical until TASK_012" invariant propagated to all tasks that read it.
@@ -150,10 +160,13 @@ Architectural decisions promised by tasks land in `memory_bank/decisions/DEC_XXX
 2026-05-28 **Pass 1 reviewed and approved by human.** All 12 task files (TASK_001..TASK_012) moved from `Planning` → `Ready` ("Ready" is a protocol extension meaning "Black Box Interface approved, awaiting Pass 2 decomposition + execution"; standard protocol statuses Active/Blocked/Complete/Archived remain unchanged downstream). Pass 2 will be initiated in a fresh conversation per task — task files are self-contained and do not require the planning-phase chat history. Two Pass 2 implementation notes captured in their respective task files: TASK_007 records `kill(-pid)` as a POSIX-only abort strategy with macOS as the target (Windows support deferred); TASK_009 records that `build-user-message.js` must paste the artifact's `fullPrompt` template literal as a frozen fixture rather than rely on a line-number reference that drifts.
 2026-05-28 **Sonar scanner switched to `@sonar/scan` (Node CLI; binary `sonar`).** All references to `sonar-scanner` across task files, registry conventions, and CLAUDE.md replaced with `sonar`. TASK_001 OUTPUT enumerates the `sonar-project.properties` contents (`projectKey=idaliopessoa_gospelviral`, `organization=idaliopessoa`, `host.url=https://sonarcloud.io`, sources/tests/lcov for the three workspaces) and the `.env.local` rule (`SONAR_TOKEN` lives there only, gitignored before first `git add`). TASK_001 ships a `pnpm sonar` script wrapping `@sonar/scan`. New DECs registered: `DEC_XXX_sonar_node_scanner.md` (scanner choice) and `DEC_XXX_scaffold_coverage_gate.md` ("Coverage on New Code" Quality Gate FAIL on the scaffold scan is EXPECTED — report to human, never bypass; three remediation paths the human picks from). Risk Assessment expanded with token-leak + install-variant rows. Token bytes recorded only in execution-plan memory (~/.claude/projects/.../execution_plan_pass_2.md, not in git).
 2026-05-28 **Playwright removed from scaffold (TASK_001 DEC).** Browser-driven UI verification routes through the Chrome DevTools MCP that the agent connects to (`navigate`, `take_screenshot`, `list_console_messages`, `list_network_requests`, `evaluate`, `click`, `fill`, `wait_for`). All task P3 sections updated: server-only tasks declare "Browser smoke (Chrome DevTools MCP): skipped"; UI tasks (TASK_004 / TASK_010 / TASK_011 / TASK_012) replace Playwright instructions with explicit MCP sequences (navigate → screenshot → console + network assertions → evaluate for state introspection). TASK_004 risk row and DEC updated to reflect MCP screenshots as parity evidence. TASK_012 ROADMAP item rewritten to position Playwright as the future swap-in if pixel-diff snapshot regression becomes worthwhile. Subagent `.claude/agents/black-box-auditor.md` created — read-only architectural auditor invoked at the end of every Pass 2 task to produce a GAP REPORT before merge. Project memory `~/.claude/projects/.../memory/execution_plan_pass_2.md` pins the autonomous Pass 2 cycle for fresh sessions.
+2026-05-28 **Phase 1+2 migration complete (v1.0.0 released).** Bootstrap `bootstrap-features-fases-3-6.md` introduces Phases 3–6 (card tabs, video ingestion, play + subtitle sync, MP4 export with burned subtitles). Sequencing 3 → 4 → 5 → 6 with human gate between phases.
+2026-05-28 **TASK_013 created (Phase 3 Pass 1).** Sole task for Phase 3: card tabs (Redes Sociais default + Legenda do Vídeo). Decisions captured in task file: (D1) single task, (D2) score `<details>` stays outside tabs, (D3) "limpar" regex deferred to ROADMAP, (D4) helper in `apps/web/src/lib/` (web-only until 2nd consumer), (D5) per-card local tab state (not lifted). Inviolable DEC "app nunca baixa do YouTube" removed from bootstrap per human directive.
+2026-05-28 **TASK_013 Pass 1 approved by human, D5 reversed.** Tab state (`activeCardTab`) is now **GLOBAL**, owned by `App.jsx` and threaded down via props — same coherence pattern as `subtitleConfig` / `videoConfig` / `overlayConfig` / `isConfigCollapsed`; one click flips all 5 cards. `CardTabs` becomes stateless / fully controlled. D4 reinforced with explicit promotion clause: if FASE 6 needs the same extractor, file MIGRATES to `packages/shared` (no duplication). Persistence of `activeCardTab` deferred (schema bump v1→v2 in a separate follow-up task). Task file bumped to v1.1.
 
 ## Task ID Sequence
-Last Used: TASK_012
-Next Available: TASK_013
+Last Used: TASK_013
+Next Available: TASK_014
 
 ## Conventions Snapshot (used by every task)
 
