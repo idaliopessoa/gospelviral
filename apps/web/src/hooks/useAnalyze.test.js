@@ -91,10 +91,10 @@ describe('useAnalyze', () => {
     // Assert
     expect(result.current.view).toBe('input');
     expect(result.current.error).toMatch(/Falha na análise: boom/);
-    expect(fakeClient).toHaveBeenCalledWith({
-      url: EXAMPLE_URL,
-      transcript: '00:00 ok',
-    });
+    expect(fakeClient).toHaveBeenCalledWith(
+      expect.objectContaining({ url: EXAMPLE_URL, transcript: '00:00 ok' }),
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
   });
 
   it('reset() clears results, error and flips back to input', async () => {
