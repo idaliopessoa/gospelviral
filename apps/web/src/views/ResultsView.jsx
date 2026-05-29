@@ -74,6 +74,9 @@ export default function ResultsView({
   setActiveCardTab,
   isCollapsed,
   setIsCollapsed,
+  mode,
+  playingIndex,
+  setPlayingIndex,
 }) {
   return (
     <>
@@ -106,6 +109,11 @@ export default function ResultsView({
             onSubtitleConfigChange={setSubtitleConfig}
             activeCardTab={activeCardTab}
             onActiveCardTabChange={setActiveCardTab}
+            videoSource={videoSource}
+            mode={mode}
+            isActivePlayer={playingIndex === i}
+            onRequestPlay={() => setPlayingIndex(i)}
+            onPlaybackEnd={() => setPlayingIndex(null)}
             index={i}
           />
         ))}

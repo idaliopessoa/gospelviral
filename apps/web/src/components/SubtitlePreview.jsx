@@ -1,9 +1,10 @@
-import { useMemo } from 'react';
+import { Play } from 'lucide-react';
 import { SUBTITLE_ANCHOR_PERCENT } from '@gospelviral/shared';
-import { chunkText } from '../lib/helpers.js';
+import { timestampToSeconds } from '../lib/helpers.js';
+import { cueAt } from '../lib/cueAt.js';
 import { highlightText } from '../lib/text-highlight.js';
 import { useCanvasMeasurement } from '../hooks/useCanvasMeasurement.js';
-import { useChunkRotation } from '../hooks/useChunkRotation.js';
+import { useVideoPlayback } from '../hooks/useVideoPlayback.js';
 import { usePointerDrag } from '../hooks/usePointerDrag.js';
 
 const SIZE_MAP = { S: '14px', M: '17px', L: '21px' };
@@ -37,10 +38,20 @@ function buildTextStyle(config) {
   };
 }
 
-function VideoLayer({ videoId, videoConfig, vxPreview, vyPreview, dragHandlers }) {
+function VideoLayer({
+  hasVideo,
+  streamUrl,
+  videoRef,
+  videoId,
+  videoConfig,
+  vxPreview,
+  vyPreview,
+  editable,
+  dragHandlers,
+}) {
   return (
     <div
-      className="video-16-9 absolute cursor-move"
+      className={`video-16-9 absolute ${editable ? 'cursor-move' : ''}`}
       style={{
         top: '50%',
         left: '50%',
@@ -51,15 +62,26 @@ function VideoLayer({ videoId, videoConfig, vxPreview, vyPreview, dragHandlers }
       {...dragHandlers}
       data-testid="video-layer"
     >
-      <img
-        src={`https://img.youtube.com/vi/${videoId}/hqdefault.jpg`}
-        alt=""
-        draggable={false}
-        className="w-full h-full object-cover pointer-events-none"
-        onError={(e) => {
-          e.currentTarget.src = `https://img.youtube.com/vi/${videoId}/0.jpg`;
-        }}
-      />
+      {hasVideo ? (
+        <video
+          ref={videoRef}
+          src={streamUrl}
+          preload="metadata"
+          playsInline
+          className="w-full h-full object-cover pointer-events-none"
+          data-testid="video-el"
+        />
+      ) : (
+        <img
+          src={`https://img.youtube.com/vi/${videoId}/hqdefault.jpg`}
+          alt=""
+          draggable={false}
+          className="w-full h-full object-cover pointer-events-none"
+          onError={(e) => {
+            e.currentTarget.src = `https://img.youtube.com/vi/${videoId}/0.jpg`;
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -126,6 +148,22 @@ function SubtitleLayer({
   );
 }
 
+function PlayButton({ onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      data-testid="play-button"
+      aria-label="Reproduzir trecho"
+      className="absolute inset-0 z-30 flex items-center justify-center bg-black/25 hover:bg-black/10 transition-colors group"
+    >
+      <span className="w-14 h-14 rounded-full bg-white/90 flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
+        <Play size={24} className="text-stone-900 translate-x-0.5" fill="currentColor" />
+      </span>
+    </button>
+  );
+}
+
 export default function SubtitlePreview({
   videoId,
   moment,
@@ -134,31 +172,49 @@ export default function SubtitlePreview({
   overlayConfig,
   onVideoConfigChange,
   onSubtitleConfigChange,
+  videoSource = null,
+  cues = [],
+  mode = 'edit',
+  isActivePlayer = false,
+  onRequestPlay,
+  onPlaybackEnd,
 }) {
   const config = subtitleConfig;
-  const text = moment.key_quote || moment.hook_title || '';
-  const chunks = useMemo(
-    () => chunkText(text, config.charsPerScreen, config.lines),
-    [text, config.charsPerScreen, config.lines],
-  );
+  const startSec = timestampToSeconds(moment.timestamp_start);
+  const endSec = timestampToSeconds(moment.timestamp_end);
   const { canvasRef, scaleFactor } = useCanvasMeasurement();
-  const chunkIndex = useChunkRotation(chunks);
 
-  const currentChunk = chunks[chunkIndex] || '';
-  const highlighted = highlightText(currentChunk, config);
+  // Playback hook is always called (rules of hooks); it no-ops without a <video>.
+  const { videoRef, currentTime, play } = useVideoPlayback({
+    startSec,
+    endSec,
+    isActivePlayer,
+    onReachEnd: onPlaybackEnd,
+  });
+
+  const hasVideo = Boolean(videoSource) && mode === 'player';
+  const editable = mode === 'edit';
+
+  // Subtitle text is DERIVED from currentTime — the active cue, or cue[0] when
+  // paused / in edit (cueAt clamps), or the moment key_quote when no cues exist.
+  const cue = cueAt(cues, currentTime);
+  const subtitleText = cue?.text ?? moment.key_quote ?? moment.hook_title ?? '';
+  const highlighted = highlightText(subtitleText, config);
   const anchorPercent = SUBTITLE_ANCHOR_PERCENT[config.position] ?? SUBTITLE_ANCHOR_PERCENT.bottom;
   const textStyle = buildTextStyle(config);
 
+  // Drag is gated to EDIÇÃO mode: in PLAYER mode onCommit is undefined, so
+  // usePointerDrag's pointerdown short-circuits and the layers are static.
   const { handlers: videoDragHandlers } = usePointerDrag({
     getInitialPosition: () => ({ x: videoConfig.x, y: videoConfig.y }),
     scaleFactor,
-    onCommit: (next) => onVideoConfigChange?.({ ...videoConfig, ...next }),
+    onCommit: editable ? (next) => onVideoConfigChange?.({ ...videoConfig, ...next }) : undefined,
   });
 
   const { handlers: subtitleDragHandlers } = usePointerDrag({
     getInitialPosition: () => ({ x: config.x || 0, y: config.y || 0 }),
     scaleFactor,
-    onCommit: (next) => onSubtitleConfigChange?.({ ...config, ...next }),
+    onCommit: editable ? (next) => onSubtitleConfigChange?.({ ...config, ...next }) : undefined,
     stopPropagation: true,
   });
 
@@ -167,16 +223,28 @@ export default function SubtitlePreview({
   const sxPreview = (config.x || 0) * scaleFactor;
   const syPreview = (config.y || 0) * scaleFactor;
 
+  const streamUrl = videoSource ? `/api/upload/video/${videoSource.id}/stream` : null;
+  const showPlayButton = hasVideo && !isActivePlayer;
+
+  function handlePlayClick() {
+    play(); // synchronous within the click gesture — autoplay-safe
+    onRequestPlay?.();
+  }
+
   return (
     <div
       ref={canvasRef}
       className="canvas-9-16 relative overflow-hidden rounded-md bg-stone-900 shadow-lg select-none isolate"
     >
       <VideoLayer
+        hasVideo={hasVideo}
+        streamUrl={streamUrl}
+        videoRef={videoRef}
         videoId={videoId}
         videoConfig={videoConfig}
         vxPreview={vxPreview}
         vyPreview={vyPreview}
+        editable={editable}
         dragHandlers={videoDragHandlers}
       />
       <OverlayLayer overlayConfig={overlayConfig} />
@@ -188,14 +256,9 @@ export default function SubtitlePreview({
         sxPreview={sxPreview}
         syPreview={syPreview}
         dragHandlers={subtitleDragHandlers}
-        draggable={Boolean(onSubtitleConfigChange)}
+        draggable={editable && Boolean(onSubtitleConfigChange)}
       />
-      <div
-        className="absolute top-3 left-3 px-2 py-0.5 bg-black/60 backdrop-blur rounded text-[10px] text-white tracking-wider uppercase pointer-events-none z-20"
-        style={{ fontFamily: "'IBM Plex Mono', monospace" }}
-      >
-        {chunkIndex + 1}/{chunks.length}
-      </div>
+      {showPlayButton && <PlayButton onClick={handlePlayClick} />}
     </div>
   );
 }

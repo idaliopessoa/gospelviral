@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { BookOpen, Check, ChevronDown, ChevronUp, CircleAlert, Flame, ShieldCheck } from 'lucide-react';
+import { buildSubtitleCues } from '@gospelviral/shared';
 import { timestampToSeconds } from '../lib/helpers.js';
 import { extractSegmentLines } from '../lib/transcript-extract.js';
 import CardTabs from './CardTabs.jsx';
@@ -341,13 +342,24 @@ export default function MomentCard({
   transcript = '',
   activeCardTab = 'redes-sociais',
   onActiveCardTabChange,
+  videoSource = null,
+  mode = 'edit',
+  isActivePlayer = false,
+  onRequestPlay,
+  onPlaybackEnd,
   index,
 }) {
   const startSec = timestampToSeconds(moment.timestamp_start);
   const purposeColor = PURPOSE_COLOR[moment.content_purpose] || '#3F3F3F';
 
+  // The Legenda tab (reading) and the player cues (timed display) are distinct
+  // concepts that coincide today — kept as separate memos by design.
   const segmentLines = useMemo(
     () => extractSegmentLines(transcript, moment.timestamp_start, moment.timestamp_end),
+    [transcript, moment.timestamp_start, moment.timestamp_end],
+  );
+  const cues = useMemo(
+    () => buildSubtitleCues(transcript, moment.timestamp_start, moment.timestamp_end),
     [transcript, moment.timestamp_start, moment.timestamp_end],
   );
 
@@ -392,6 +404,12 @@ export default function MomentCard({
             overlayConfig={overlayConfig}
             onVideoConfigChange={onVideoConfigChange}
             onSubtitleConfigChange={onSubtitleConfigChange}
+            videoSource={videoSource}
+            cues={cues}
+            mode={mode}
+            isActivePlayer={isActivePlayer}
+            onRequestPlay={onRequestPlay}
+            onPlaybackEnd={onPlaybackEnd}
           />
         </div>
 
