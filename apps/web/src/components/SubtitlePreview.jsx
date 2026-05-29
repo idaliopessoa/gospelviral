@@ -1,6 +1,11 @@
-import { Play } from 'lucide-react';
-import { SUBTITLE_ANCHOR_PERCENT } from '@gospelviral/shared';
-import { timestampToSeconds } from '../lib/helpers.js';
+import { useMemo } from 'react';
+import { Play, Pause } from 'lucide-react';
+import {
+  SUBTITLE_ANCHOR_PERCENT,
+  parseColdOpenRange,
+  buildPlaybackSegments,
+} from '@gospelviral/shared';
+import { timestampToSeconds, selectVisibleChunk } from '../lib/helpers.js';
 import { cueAt } from '../lib/cueAt.js';
 import { highlightText } from '../lib/text-highlight.js';
 import { useCanvasMeasurement } from '../hooks/useCanvasMeasurement.js';
@@ -34,7 +39,11 @@ function buildTextStyle(config) {
     backgroundColor: resolveBackgroundColor(config.background, config.bgColor),
     borderRadius: hasFill ? '4px' : '0',
     display: 'inline-block',
-    maxWidth: '92%',
+    // `lines` is a HARD visual cap (D3, decision #7): the chunk holds
+    // charsPerScreen×lines chars and the width is bounded to ~charsPerScreen
+    // `ch`, so the text wraps to roughly `lines` rows. `min(92%, …)` keeps it
+    // inside the 9:16 canvas on narrow screens.
+    maxWidth: `min(92%, ${config.charsPerScreen}ch)`,
   };
 }
 
@@ -164,6 +173,30 @@ function PlayButton({ onClick }) {
   );
 }
 
+// While the cut is rolling: a transparent full-bleed pause control (z-30, above
+// the overlay). The <video> stays pointer-events-none; a real <button> avoids
+// the iOS "tap video → native controls" trap. The pause glyph appears on hover
+// so it never obscures the playing frame (D2 — paused-but-active model).
+function PauseButton({ onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      data-testid="pause-button"
+      aria-label="Pausar trecho"
+      className="absolute inset-0 z-30 flex items-center justify-center bg-transparent hover:bg-black/10 transition-colors group"
+    >
+      <span className="w-14 h-14 rounded-full bg-white/0 group-hover:bg-white/90 flex items-center justify-center transition-colors">
+        <Pause
+          size={24}
+          className="text-stone-900 opacity-0 group-hover:opacity-100 transition-opacity"
+          fill="currentColor"
+        />
+      </span>
+    </button>
+  );
+}
+
 export default function SubtitlePreview({
   videoId,
   moment,
@@ -184,21 +217,44 @@ export default function SubtitlePreview({
   const endSec = timestampToSeconds(moment.timestamp_end);
   const { canvasRef, scaleFactor } = useCanvasMeasurement();
 
+  // Playback segments (D6): an apply_cold_open moment plays [peak, fullCut] so
+  // the peak teaser replays in context; otherwise the single full cut (= pre-D6
+  // behavior). Memoized on the stable string inputs so the hook's listeners are
+  // not re-attached every render. The cold-open peak is a RANGE string — parse
+  // it via parseColdOpenRange (split-first, never timestampToSeconds(whole)).
+  const peakTimestamp = moment.cold_open_analysis?.peak_moment?.timestamp;
+  const segments = useMemo(
+    () => buildPlaybackSegments(moment, parseColdOpenRange(peakTimestamp)),
+    [moment, peakTimestamp],
+  );
+
   // Playback hook is always called (rules of hooks); it no-ops without a <video>.
-  const { videoRef, currentTime, play } = useVideoPlayback({
-    startSec,
-    endSec,
+  // (The hook also returns `toggle`; the two-affordance UI below drives play/
+  // pause directly so the play button stays a pure "not playing" signal.)
+  const { videoRef, currentTime, play, pause, isPlaying } = useVideoPlayback({
+    segments,
     isActivePlayer,
     onReachEnd: onPlaybackEnd,
   });
 
-  const hasVideo = Boolean(videoSource) && mode === 'player';
+  // D1: an uploaded video is the canvas source in BOTH modes — a paused poster
+  // frame (seeked to startSec) while editing, live playback in player mode. The
+  // YouTube thumbnail is only the no-videoSource fallback. Drag stays gated to
+  // edit (on the wrapper div; the <video> is pointer-events-none).
+  const hasVideo = Boolean(videoSource);
   const editable = mode === 'edit';
 
   // Subtitle text is DERIVED from currentTime — the active cue, or cue[0] when
   // paused / in edit (cueAt clamps), or the moment key_quote when no cues exist.
+  // The cue text is then chunked by the panel's charsPerScreen/lines (D3 — the
+  // panel is the SSOT for on-screen text shape; preview == export), and the
+  // visible chunk advances with currentTime inside the cue window. Edit mode
+  // pins chunk[0] (clock = window start). Highlight runs on the VISIBLE chunk.
   const cue = cueAt(cues, currentTime);
-  const subtitleText = cue?.text ?? moment.key_quote ?? moment.hook_title ?? '';
+  const sourceText = cue?.text ?? moment.key_quote ?? moment.hook_title ?? '';
+  const cueWindow = cue ? { start: cue.start, end: cue.end } : { start: startSec, end: endSec };
+  const clock = editable ? cueWindow.start : currentTime;
+  const subtitleText = selectVisibleChunk(sourceText, clock, cueWindow, config);
   const highlighted = highlightText(subtitleText, config);
   const anchorPercent = SUBTITLE_ANCHOR_PERCENT[config.position] ?? SUBTITLE_ANCHOR_PERCENT.bottom;
   const textStyle = buildTextStyle(config);
@@ -224,11 +280,16 @@ export default function SubtitlePreview({
   const syPreview = (config.y || 0) * scaleFactor;
 
   const streamUrl = videoSource ? `/api/upload/video/${videoSource.id}/stream` : null;
-  const showPlayButton = hasVideo && !isActivePlayer;
+  // Affordances are PLAYER-mode only: edit shows the poster frame for
+  // positioning (drag-only, never playable). While NOT playing (fresh,
+  // paused-but-active, or paused-at-end) the play/resume button shows; while
+  // playing, a transparent pause control covers the surface (D2).
+  const showPlayButton = hasVideo && mode === 'player' && !isPlaying;
+  const showPauseButton = hasVideo && mode === 'player' && isPlaying;
 
   function handlePlayClick() {
     play(); // synchronous within the click gesture — autoplay-safe
-    onRequestPlay?.();
+    onRequestPlay?.(); // claim the global player slot (idempotent on resume)
   }
 
   return (
@@ -259,6 +320,7 @@ export default function SubtitlePreview({
         draggable={editable && Boolean(onSubtitleConfigChange)}
       />
       {showPlayButton && <PlayButton onClick={handlePlayClick} />}
+      {showPauseButton && <PauseButton onClick={pause} />}
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseRangeHeader } from './range.js';
+import { parseRangeHeader, DEFAULT_OPEN_RANGE_CHUNK_BYTES } from './range.js';
 
 const SIZE = 1000; // bytes 0..999
 
@@ -87,5 +87,52 @@ describe('parseRangeHeader', () => {
   it('returns null for a bare dash with no bounds', () => {
     // Arrange + Act + Assert
     expect(parseRangeHeader('bytes=-', SIZE)).toBeNull();
+  });
+
+  describe('open-ended range cap (O2)', () => {
+    it('caps an open-ended bytes=START- to maxOpenEndedBytes instead of EOF', () => {
+      // Arrange + Act — cap 100 from start 0 → bytes 0..99
+      const out = parseRangeHeader('bytes=0-', SIZE, 100);
+
+      // Assert
+      expect(out).toEqual({ start: 0, end: 99 });
+    });
+
+    it('caps from a deep start (the deep-seek flood case)', () => {
+      // Act — bytes=500- with cap 100 → 500..599 (not 500..999)
+      const out = parseRangeHeader('bytes=500-', SIZE, 100);
+
+      // Assert
+      expect(out).toEqual({ start: 500, end: 599 });
+    });
+
+    it('serves the tail to EOF when it is already smaller than the cap', () => {
+      // Act — bytes=950- with cap 100 would be 950..1049 → clamps to 950..999
+      const out = parseRangeHeader('bytes=950-', SIZE, 100);
+
+      // Assert
+      expect(out).toEqual({ start: 950, end: 999 });
+    });
+
+    it('does NOT cap an explicit bytes=START-END (client asked for that window)', () => {
+      // Act — explicit closed range stays untouched even past the cap
+      const out = parseRangeHeader('bytes=0-500', SIZE, 100);
+
+      // Assert
+      expect(out).toEqual({ start: 0, end: 500 });
+    });
+
+    it('default (no cap arg) preserves the stream-to-EOF behavior', () => {
+      // Act
+      const out = parseRangeHeader('bytes=0-', SIZE);
+
+      // Assert — Infinity default → whole file
+      expect(out).toEqual({ start: 0, end: 999 });
+    });
+
+    it('exposes a sane default chunk size', () => {
+      // Assert — 8 MiB
+      expect(DEFAULT_OPEN_RANGE_CHUNK_BYTES).toBe(8 * 1024 * 1024);
+    });
   });
 });

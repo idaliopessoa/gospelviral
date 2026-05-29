@@ -1,7 +1,7 @@
 # TASK_018: Play + Subtitle Sync (frontend)
 timestamp: 2026-05-29T00:00:00Z
 version: 1.0
-status: Ready
+status: Complete (merged via PR #7 on 2026-05-29)
 owner: unassigned
 confidence: MEDIUM
 phase: 5

@@ -46,3 +46,35 @@ export function chunkText(text, charsPerScreen, lines) {
   if (current) chunks.push(current);
   return chunks.length ? chunks : [''];
 }
+
+function clamp(n, lo, hi) {
+  if (n < lo) return lo;
+  if (n > hi) return hi;
+  return n;
+}
+
+/**
+ * Pick the subtitle chunk visible at `currentTime` within a cue window (D3 —
+ * panel as SSOT for on-screen text shape). The text is split with `chunkText`
+ * (the SAME math the Phase 6 burned-in export uses → "o que se vê é o que se
+ * queima", preview == export — never a CSS-clamp-only approximation), and the
+ * chunk index is DERIVED from `currentTime` across `[start, end)` — no timer,
+ * no extra state (the only clock is `currentTime`). Pin to chunk[0] by passing
+ * `cueWindow.start` as `currentTime` (edit mode / paused poster).
+ *
+ * @param {string} text                       cue text (or key_quote fallback)
+ * @param {number} currentTime                seconds, absolute on the file timeline
+ * @param {{start: number, end: number}} cueWindow  the active cue's [start, end)
+ * @param {{charsPerScreen: number, lines: number}} shape  panel subtitle shape
+ * @returns {string} the visible chunk
+ */
+export function selectVisibleChunk(text, currentTime, cueWindow, { charsPerScreen, lines }) {
+  const chunks = chunkText(text, charsPerScreen, lines);
+  if (chunks.length <= 1) return chunks[0];
+  const { start, end } = cueWindow;
+  const duration = end - start;
+  if (duration <= 0) return chunks[0];
+  const perChunk = duration / chunks.length;
+  const idx = Math.floor((currentTime - start) / perChunk);
+  return chunks[clamp(idx, 0, chunks.length - 1)];
+}

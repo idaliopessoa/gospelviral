@@ -1,0 +1,30 @@
+
+> @gospelviral/server@0.0.0 smoke:heap /Users/idaliopessoa/dev/gospelviral/apps/server
+> node --expose-gc scripts/smoke-heap.js
+
+{"ts":"2026-05-29T21:12:07.446Z","level":"info","msg":"video-storage init","scope":"video-storage","dir":"/tmp/claude-501/smoke-heap-B-394559b8-3a70-4e1d-aa7c-0229f9f954e9","deleted":0}
+== smoke:heap ==
+target          : 1.46 GB
+-- Gate A (upload: parser + storage) --
+  baseline heap : 4.7 MB
+  max heap      : 6.8 MB
+  delta heap    : 2.1 MB  (limit 50.0 MB)
+  bytes on disk : 1.46 GB  (target 1.46 GB)
+  samples       : 12
+  verdict       : PASS
+-- Gate B (upload: route via app.fetch) --
+  baseline heap : 8.1 MB
+  max heap      : 10.6 MB
+  delta heap    : 2.5 MB  (limit 50.0 MB)
+  bytes on disk : 1.46 GB  (target 1.46 GB)
+  samples       : 13
+  verdict       : PASS
+-- Gate C (download: storage.streamRange) --
+  baseline heap : 7.1 MB
+  max heap      : 10.3 MB
+  delta heap    : 3.2 MB  (limit 50.0 MB)
+  bytes on disk : 1.46 GB  (target 1.46 GB)
+  samples       : 9
+  verdict       : PASS
+overall         : PASS
+evidence        : /Users/idaliopessoa/dev/gospelviral/memory_bank/tasks/evidence/task_014

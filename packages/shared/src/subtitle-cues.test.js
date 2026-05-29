@@ -1,6 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { buildSubtitleCues } from './subtitle-cues.js';
 import { EXAMPLE_TRANSCRIPT } from './example-data.js';
+import {
+  EDITOR_MOMENT_TRANSCRIPT,
+  EDITOR_MOMENT_RANGES,
+} from './__tests__/fixtures/editor-transcript.js';
 
 describe('buildSubtitleCues', () => {
   it('tiles the EXAMPLE_TRANSCRIPT segment gap-free with timecodes stripped (success criterion #1)', () => {
@@ -143,5 +147,32 @@ describe('buildSubtitleCues', () => {
     expect(buildSubtitleCues('', '00:00', '01:00')).toEqual([]);
     expect(buildSubtitleCues('no timestamps here', '00:00', '01:00')).toEqual([]);
     expect(buildSubtitleCues(null, '00:00', '01:00')).toEqual([]);
+  });
+
+  describe('real editor-timecode export (D4)', () => {
+    it.each(EDITOR_MOMENT_RANGES)(
+      'yields non-empty, clean cues for moment #$rank ($start–$end) — no "indisponível"',
+      ({ start, end }) => {
+        // Act
+        const cues = buildSubtitleCues(EDITOR_MOMENT_TRANSCRIPT, start, end);
+
+        // Assert — covered range produces cues (the bug returned []), text is clean
+        expect(cues.length).toBeGreaterThan(0);
+        for (const cue of cues) {
+          expect(cue.text.length).toBeGreaterThan(0);
+          expect(cue.text.startsWith('Unknown')).toBe(false); // speaker label stripped
+          expect(cue.text).not.toMatch(/^\d{2}:\d{2}:\d{2}/); // no leading timecode
+          expect(cue.text).not.toMatch(/\d{2}:\d{2}:\d{2}:\d{2}/); // no frame digits leaked
+        }
+      },
+    );
+
+    it('anchors moment #1 cues on the absolute START second (5305), frames dropped', () => {
+      // Act
+      const cues = buildSubtitleCues(EDITOR_MOMENT_TRANSCRIPT, '01:28:25', '01:29:13');
+
+      // Assert — 01:28:25 = 5305s absolute on the file timeline
+      expect(cues[0].start).toBe(5305);
+    });
   });
 });

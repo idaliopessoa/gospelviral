@@ -5,7 +5,7 @@ import {
   MultipartError,
 } from '../lib/multipart-parser.js';
 import { isValidVideoId } from '../lib/upload-validation.js';
-import { parseRangeHeader } from '../lib/range.js';
+import { parseRangeHeader, DEFAULT_OPEN_RANGE_CHUNK_BYTES } from '../lib/range.js';
 import {
   EmptyFileError,
   UnsupportedMimeTypeError,
@@ -18,9 +18,16 @@ import {
  * @param {import('../storage/video-storage.js').createVideoStorage} deps.storage
  * @param {Set<string>} deps.allowedMimes
  * @param {number} deps.maxBytes
+ * @param {number} [deps.streamChunkBytes] cap for an open-ended `bytes=START-`
+ *   range response (O2); defaults to DEFAULT_OPEN_RANGE_CHUNK_BYTES.
  * @returns {Hono}
  */
-export function createUploadRouter({ storage, allowedMimes, maxBytes }) {
+export function createUploadRouter({
+  storage,
+  allowedMimes,
+  maxBytes,
+  streamChunkBytes = DEFAULT_OPEN_RANGE_CHUNK_BYTES,
+}) {
   const app = new Hono();
 
   app.post('/', async (c) => {
@@ -95,7 +102,7 @@ export function createUploadRouter({ storage, allowedMimes, maxBytes }) {
       return c.json({ error: { code: 'not_found', message: 'unknown id' } }, 404);
     }
 
-    const parsed = parseRangeHeader(c.req.header('range'), meta.sizeBytes);
+    const parsed = parseRangeHeader(c.req.header('range'), meta.sizeBytes, streamChunkBytes);
     if (parsed === 'unsatisfiable') {
       return c.body(null, 416, { 'Content-Range': `bytes */${meta.sizeBytes}` });
     }

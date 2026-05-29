@@ -196,7 +196,7 @@ Architectural decisions promised by tasks land in `memory_bank/decisions/DEC_XXX
 - **smoke:heap**: NOT triggered (no hot-path file)
 
 ### TASK_018: Play + Subtitle Sync (frontend)
-- **Status**: Ready
+- **Status**: Complete (merged via PR #7 on 2026-05-29)
 - **Interface**: INPUT[TASK_016 stream route, TASK_017 cues, TASK_015 videoSource, current `SubtitlePreview` + `useChunkRotation` + `MomentCard`/`App`] → OUTPUT[`useVideoPlayback` hook + `cueAt` selector + `SubtitlePreview` refactor (`<video>` + central play button + cue-driven subtitle + drag gated by mode + remove 2.2s rotation/badge) + `App.jsx` `playingIndex` + derived `mode` + pause-on-config-open + ResultsView/MomentCard threading + delete `useChunkRotation` + Vitest suites + Chrome DevTools MCP smoke]
 - **Confidence**: MEDIUM (global playback orchestration is the heaviest state)
 - **Black Box**: Each card's 9:16 preview plays the uploaded `<video>` with the subtitle synced to transcript timecodes. Panel-collapse doubles as a GLOBAL mode (PLAYER↔EDIÇÃO); single `playingIndex` in App enforces one-plays-at-a-time; opening a config tab pauses everything. The arbitrary 2.2s rotation is removed. No `videoSource` → today's static-thumbnail edit behavior (no regression).
@@ -205,6 +205,29 @@ Architectural decisions promised by tasks land in `memory_bank/decisions/DEC_XXX
 - **File**: task_018_play_subtitle_sync.md
 - **Depends on**: TASK_015, TASK_016, TASK_017
 - **smoke:heap**: NOT triggered (frontend-only)
+
+### TASK_019: Player + Subtitle real-use fixes + streaming/schema hardening
+- **Status**: Planning
+- **Interface**: INPUT[TASK_018 follow-up insumos + findings A–D + real `analyze-60` transcript/moments + affected web/shared/server files] → OUTPUT[D4 transcript parser (real editor-timecode format, shared SSOT) + D3 `selectVisibleChunk` (panel SSOT chars/lines) + D5 font `<link>` (prod-build fix) + D1 `<video>` poster both modes + D2 pause/toggle + D6 cold-open segment sequence (`segments[]` + `parseColdOpenRange`/`buildPlaybackSegments`/`advanceSegment`) + O2 range chunk cap + O3 size typedef + O4 remove stream-debug]
+- **Confidence**: MEDIUM (useVideoPlayback double-touch D2+D6)
+- **Black Box**: Fix the real-use defects of the TASK_018 player against a real sermon + real upload — uploaded video as canvas source both modes (D1) with play/pause (D2); panel as SSOT for subtitle shape incl. the font that never loaded in prod (D3/D5); parser learns the real editor-timecode transcript so cues populate (D4); cold-open peak plays before the full cut (D6); plus streaming/schema hardening (O2 range-to-EOF, O3 typedef, O4 debug cleanup). (O1 analyze-504 spun out → TASK_020.)
+- **Phase**: 5 (follow-up to TASK_018)
+- **Prerequisites**: ✅ P1+P2+P3 included
+- **File**: task_019_player_subtitle_streaming_fixes.md
+- **Depends on**: TASK_018 (merged via PR #7) — branch from `develop`
+- **smoke:heap**: TRIGGERED (O2 + O4 touch `routes/upload.js`)
+- **Decomposition**: REQUIRED (HIGH complexity) — Pass 2 (6 subtasks: 019.1 quick-wins · 019.2 parser · 019.3 chunk · 019.4 video poster · 019.5 hook D2+D6 · 019.6 range cap)
+
+### TASK_020: Analyze long-run resilience (kill spurious 504)
+- **Status**: Planning
+- **Interface**: INPUT[`routes/analyze.js` withTimeout/abort, `lib/api.js`, vite proxy, `server.js` serve timeouts, DEC_021] → OUTPUT[long `/api/analyze` connection held alive (SSE / keep-alive / timeout tuning — TBD) so proxy/browser don't drop it → no spurious 504; genuine timeout still clean]
+- **Confidence**: LOW (architectural; transport contract; may reverse DEC_021)
+- **Black Box**: A real multi-minute analysis completes without a spurious 504 (connection held end-to-end), while a genuine over-`ANALYZE_TIMEOUT_MS` run still returns a clean `timeout` error. AUTO == CLI (same code path, not a mode bug).
+- **Phase**: 5 (spun out of TASK_019 / O1)
+- **Prerequisites**: ✅ P1+P2+P3 included
+- **File**: task_020_analyze_504_streaming.md
+- **Depends on**: TASK_009/010 (analyze transport)
+- **smoke:heap**: N/A (no hot-path file — confirm)
 
 ## Task Creation Log
 2026-05-27 TASK_001..TASK_012 created — Pass 1 high-level plan, awaiting human review before Pass 2 decomposition per task.
@@ -228,9 +251,14 @@ Architectural decisions promised by tasks land in `memory_bank/decisions/DEC_XXX
 
 2026-05-29 **TASK_017 merged via PR #6 (squash + delete branch).** SubtitleCue bilateral primitive + `buildSubtitleCues` in `@gospelviral/shared`; transcript line-parser consolidated (`transcript-lines.js`) + clock parser moved to `time.js` (web `helpers.js`/`transcript-extract.js` delegate — scope addition vs DEC D2, forced by the shared-cannot-import-web rule: canonical moved + re-exported, never duplicated). TIME REFERENCE invariant pinned (47:30→cue.start 2850, not relative-to-cut). SonarCloud QG PASS, new-code coverage 95.6%, `javascript:S3776 = 0`, zero new-code issues; black-box-auditor "AUDITORIA LIMPA" via the correct fix→re-audit cycle (no discretionary skip). Three project memories saved: [[shared-no-import-from-web]], [[ssot-discerning-not-dry-maxing]], [[auditor-gate-no-discretionary-skip]]. smoke:heap NOT triggered (no hot-path file). Phase 5: 016 + 017 done; TASK_018 (consumer) next.
 
+2026-05-29 **TASK_019 created (Pass 1) — TASK_018 follow-up from real-use testing.** 10 defects from testing the player against a real 103-min sermon + a real 1.56 GB upload: D1 video-cover-after-upload, D2 no-pause, D3 chars/lines ignored (chunkText removed), D4 "Transcript indisponível" (ROOT: real transcript is editor timecode `HH:MM:SS:FF - … / Unknown / text` — parser expects `MM:SS text`), D5 font change no-op (ROOT: `@import` after `@tailwind` → stripped by prod build), D6 cold-open out of order (peak-first then full cut), + the 4 formerly out-of-scope: O1 analyze-504 (proxy/timeout abort; SSE/keep-alive roadmap), O2 stream-`bytes=START-`-to-EOF, O3 `size` typedef (number vs S/M/L), O4 remove temp `[stream-debug]`. Investigated by 4 parallel architect-persona agents → insumos consolidated in `evidence/local-smoke/task_018_followup_INSUMOS.md` (+ findings A–D, real `analyze-60` fixtures). Adopted decisions (1–7) recorded in the task file. Complexity = 4 HIGH → decomposition REQUIRED; **Pass 2 (subtask breakdown) is the next step** with human review. Cross-cutting: `useVideoPlayback` touched by D2+D6 (one coordinated refactor); D4→D3 order; D5/D1/O3/O4 quick wins; O1 candidate to split out. Cleanup pending: revert the uncommitted `[stream-debug]` in `routes/upload.js`.
+
+2026-05-29 **TASK_018 merged via PR #7 (squash + delete branch).** Cue-synced `<video>` player + PLAYER/EDIÇÃO mode. Phase 5 (016+017+018) complete. Real-use testing surfaced follow-up defects → TASK_019.
+2026-05-29 **O1 (analyze-504) spun out of TASK_019 → TASK_020 (own task)** per human decision — it is architectural (transport contract, possible DEC_021 reversal). TASK_019 retains D1–D6 + O2/O3/O4. TASK_019 branches from `develop` (PR #7 merged first).
+
 ## Task ID Sequence
-Last Used: TASK_018
-Next Available: TASK_019
+Last Used: TASK_020
+Next Available: TASK_021
 
 ## Conventions Snapshot (used by every task)
 

@@ -36,6 +36,7 @@ app.route(
     storage: videoStorage,
     allowedMimes: env.videoAllowedMimes,
     maxBytes: env.maxUploadSizeBytes,
+    streamChunkBytes: env.streamChunkBytes,
   }),
 );
 

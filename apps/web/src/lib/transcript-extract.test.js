@@ -214,4 +214,21 @@ describe('extractSegmentLines', () => {
     // Assert
     expect(out).toEqual(['spaced text here', 'another']);
   });
+
+  it('real editor-timecode export yields clean lines — clears "Transcript indisponível" (D4)', () => {
+    // Arrange — two real blocks from the smoke sermon (moment #1 range 01:28:25–01:29:13)
+    const transcript = [
+      '01:28:25:10 - 01:28:59:13\nUnknown\nVocê colocou essa aliança no dedo da sua esposa.',
+      '01:28:59:15 - 01:29:31:09\nUnknown\nPrecisamos ser fiéis nas crises.',
+    ].join('\n\n');
+
+    // Act
+    const out = extractSegmentLines(transcript, '01:28:25', '01:29:13');
+
+    // Assert — the bug returned [] (→ "indisponível"); now clean cues, speaker stripped, no frames
+    expect(out.length).toBeGreaterThan(0);
+    expect(out[0].startsWith('Unknown')).toBe(false);
+    expect(out.join(' ')).not.toMatch(/\d{2}:\d{2}:\d{2}:\d{2}/);
+    expect(out[0]).toContain('Você colocou essa aliança');
+  });
 });
