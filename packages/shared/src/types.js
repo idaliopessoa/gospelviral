@@ -29,7 +29,7 @@ export const SUBTITLE_ANCHOR_PERCENT = Object.freeze({ top: 12, center: 50, bott
  * @property {number} charsPerScreen
  * @property {number} lines
  * @property {'top'|'center'|'bottom'} position
- * @property {number} size
+ * @property {'S'|'M'|'L'} size
  * @property {boolean} highlightScripture
  * @property {boolean} highlightKeywords
  * @property {number} x  offset in 1080-px canvas reference
