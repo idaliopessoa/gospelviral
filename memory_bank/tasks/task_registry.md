@@ -207,7 +207,7 @@ Architectural decisions promised by tasks land in `memory_bank/decisions/DEC_XXX
 - **smoke:heap**: NOT triggered (frontend-only)
 
 ### TASK_019: Player + Subtitle real-use fixes + streaming/schema hardening
-- **Status**: Planning
+- **Status**: Complete (merged via PR #8 on 2026-05-29)
 - **Interface**: INPUT[TASK_018 follow-up insumos + findings A–D + real `analyze-60` transcript/moments + affected web/shared/server files] → OUTPUT[D4 transcript parser (real editor-timecode format, shared SSOT) + D3 `selectVisibleChunk` (panel SSOT chars/lines) + D5 font `<link>` (prod-build fix) + D1 `<video>` poster both modes + D2 pause/toggle + D6 cold-open segment sequence (`segments[]` + `parseColdOpenRange`/`buildPlaybackSegments`/`advanceSegment`) + O2 range chunk cap + O3 size typedef + O4 remove stream-debug]
 - **Confidence**: MEDIUM (useVideoPlayback double-touch D2+D6)
 - **Black Box**: Fix the real-use defects of the TASK_018 player against a real sermon + real upload — uploaded video as canvas source both modes (D1) with play/pause (D2); panel as SSOT for subtitle shape incl. the font that never loaded in prod (D3/D5); parser learns the real editor-timecode transcript so cues populate (D4); cold-open peak plays before the full cut (D6); plus streaming/schema hardening (O2 range-to-EOF, O3 typedef, O4 debug cleanup). (O1 analyze-504 spun out → TASK_020.)

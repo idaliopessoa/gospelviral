@@ -1,7 +1,7 @@
 # TASK_019: Player + Subtitle real-use fixes + streaming/schema hardening
 timestamp: 2026-05-29T00:00:00Z
 version: 1.0
-status: Planning
+status: Complete (merged via PR #8 on 2026-05-29)
 owner: unassigned
 confidence: MEDIUM
 phase: 5 (follow-up to TASK_018)
