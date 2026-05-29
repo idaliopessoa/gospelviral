@@ -88,13 +88,23 @@ Promote subtitle timing to a first-class shared primitive: `SubtitleCue[]`, buil
 
 ## Prerequisite Subtasks (MANDATORY)
 ### SUBTASK_017.P1: GitFlow
-**Status**: ⏱️ Not Started — branch `feature/task-017-subtitle-cues` from `develop`; commits `(shared)`; PR → develop; Co-Authored-By
+**Status**: ✅ Complete — branch `feature/task-017-subtitle-cues` from `develop`; commit `2ab7177` scope `(shared)`; Co-Authored-By trailer; PR → develop (open, awaiting human gate)
 ### SUBTASK_017.P2: Tests
-**Status**: ⏱️ Not Started — TDD/AAA; 100% on the pure modules; TASK_013 suite green unchanged; CC ≤ 15
+**Status**: ✅ Complete — TDD/AAA; 100% stmts/branch/funcs/lines on `time.js` + `transcript-lines.js` + `subtitle-cues.js`; TASK_013 suite (`transcript-extract.test.js`) green UNCHANGED; CC ≤ 15 (max ~9 in `parseTimestampPrefix`). Shared 51 / web 155 / server 157 all green
 ### SUBTASK_017.P3: Finalization
-**Status**: ⏱️ Not Started — lint 0; per-workspace coverage; `pnpm sonar` PASS + S3776=0; auditor; PR with SonarCloud block (smoke:heap N/A — record "not triggered: no hot-path file")
+**Status**: ✅ Complete — `pnpm lint` 0; per-workspace coverage regenerated; `pnpm sonar` QG **PASS**, `javascript:S3776` new-code = **0**, total new-code issues = **0**, new coverage 95.6%; black-box-auditor → clean on all substantive invariants; PR carries the SonarCloud block. **smoke:heap = NOT triggered** (no hot-path file: no upload route / video-storage / multipart-parser touched, per [[smoke_heap_invariant_trigger_files]])
 
-## Subtasks (Pass 2 will decompose)
-- SUBTASK_017.1 — move parser → `transcript-lines.js` (shared) + tests; web delegates
-- SUBTASK_017.2 — `buildSubtitleCues` + `SubtitleCue` typedef + barrel + tests
-- SUBTASK_017.3 — sonar + auditor + PR
+## Subtasks (Pass 2 — executed)
+- SUBTASK_017.1 — ✅ moved parser → `transcript-lines.js` (`parseTranscriptLines` + `normalizeCueText`) + clock parser → `time.js` (`timestampToSeconds`); web `helpers.js` re-exports, `transcript-extract.js` delegates; tests added. (Scope addition vs DEC D2: `timestampToSeconds` also moved to shared because shared cannot import from `apps/web` and `buildSubtitleCues` needs it — canonical moved + re-exported, NOT duplicated.)
+- SUBTASK_017.2 — ✅ `buildSubtitleCues` + `SubtitleCue` typedef + barrel exports + tests (incl. absolute-time pin 47:30→2850 and empty-cue tiling-gap pin)
+- SUBTASK_017.3 — ✅ sonar (PASS, S3776=0) + auditor (clean) + PR
+
+## SonarCloud (local `@sonar/scan` — repo has zero CI)
+- Scan run: 2026-05-29 (analysisId `c6d88d59-84b7-4c48-aec4-2f1d6eaff698`)
+- Commit scanned: `2ab7177`
+- Branch: `feature/task-017-subtitle-cues`
+- Quality Gate: **PASS**
+- New-code coverage: 95.6%
+- New-code issues: 0 (Blocker: 0, Critical: 0, Major: 0)
+- `javascript:S3776` (Cognitive Complexity) on new code: **0**
+- new_security_hotspots_reviewed: 100% · new_duplicated_lines_density: 0.0%
