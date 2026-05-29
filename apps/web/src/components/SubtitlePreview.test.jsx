@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent, act, within } from '@testing-library/react';
 import SubtitlePreview from './SubtitlePreview.jsx';
 import { EXAMPLE_RESPONSE } from '@gospelviral/shared';
+import { chunkText } from '../lib/helpers.js';
 
 const MOMENT = EXAMPLE_RESPONSE.top_moments[0];
 
@@ -170,12 +171,15 @@ describe('SubtitlePreview — subtitle source', () => {
     expect(screen.getByTestId('subtitle-layer')).toHaveTextContent('segunda cue falada');
   });
 
-  it('falls back to the moment key_quote when there are no cues', () => {
-    // Arrange + Act
+  it('falls back to the moment key_quote, chunked by the panel shape (D3)', () => {
+    // Arrange — no cues → key_quote fallback; BASE_SUB chars 28 × lines 2 = 56 chars/chunk
     renderPreview({ videoSource: VIDEO_SOURCE, cues: [], mode: 'player' });
+    const expectedChunk = chunkText(MOMENT.key_quote, BASE_SUB.charsPerScreen, BASE_SUB.lines)[0];
 
-    // Assert
-    expect(screen.getByTestId('subtitle-layer')).toHaveTextContent(MOMENT.key_quote);
+    // Assert — renders the FIRST chunk (panel SSOT), not the whole 77-char quote
+    const layer = screen.getByTestId('subtitle-layer');
+    expect(layer).toHaveTextContent(expectedChunk);
+    expect(layer.textContent.length).toBeLessThan(MOMENT.key_quote.length);
   });
 
   it('no longer renders the N/M chunk badge', () => {
@@ -184,6 +188,90 @@ describe('SubtitlePreview — subtitle source', () => {
 
     // Assert — the rotation badge is gone
     expect(screen.queryByText(/^\d+\/\d+$/)).not.toBeInTheDocument();
+  });
+});
+
+describe('SubtitlePreview — chunked subtitle, panel as SSOT (D3)', () => {
+  // One long cue spanning a wide window so chunking is observable.
+  const LONG_TEXT =
+    'Salmos 23:1 o Senhor é o meu pastor e nada me faltará em verdes pastos me faz repousar guia me mansamente';
+  const LONG_CUE = [{ text: LONG_TEXT, start: 0, end: 100 }];
+
+  it('chunks the cue text and pins chunk[0] in edit mode (not the whole cue)', () => {
+    // Arrange — narrow shape so the long cue splits into many chunks
+    const sub = { ...BASE_SUB, charsPerScreen: 14, lines: 1 };
+    const expectedChunk0 = chunkText(LONG_TEXT, 14, 1)[0];
+
+    // Act
+    renderPreview({ videoSource: VIDEO_SOURCE, cues: LONG_CUE, mode: 'edit', subtitleConfig: sub });
+
+    // Assert — only chunk[0] renders; not the full cue
+    const layer = screen.getByTestId('subtitle-layer');
+    expect(layer.textContent).toBe(expectedChunk0);
+    expect(layer.textContent).not.toBe(LONG_TEXT);
+  });
+
+  it('advances to a later chunk as the video currentTime moves through the cue window', () => {
+    // Arrange
+    const sub = { ...BASE_SUB, charsPerScreen: 14, lines: 1 };
+    const chunks = chunkText(LONG_TEXT, 14, 1);
+    renderPreview({
+      videoSource: VIDEO_SOURCE,
+      cues: LONG_CUE,
+      mode: 'player',
+      isActivePlayer: true,
+      subtitleConfig: sub,
+    });
+    const video = screen.getByTestId('video-el');
+
+    // Act — currentTime near the end of the [0,100) window → the last chunk
+    video.currentTime = 99;
+    act(() => fireEvent(video, new Event('timeupdate')));
+
+    // Assert
+    expect(screen.getByTestId('subtitle-layer').textContent).toBe(chunks[chunks.length - 1]);
+  });
+
+  it('changing charsPerScreen changes what renders (preview reflects the panel)', () => {
+    // Arrange + Act — narrow vs wide screen, same cue + edit (chunk[0])
+    const { unmount } = renderPreview({
+      cues: LONG_CUE,
+      mode: 'edit',
+      subtitleConfig: { ...BASE_SUB, charsPerScreen: 10, lines: 1 },
+    });
+    const narrowText = screen.getByTestId('subtitle-layer').textContent;
+    unmount();
+    renderPreview({
+      cues: LONG_CUE,
+      mode: 'edit',
+      subtitleConfig: { ...BASE_SUB, charsPerScreen: 60, lines: 1 },
+    });
+    const wideText = screen.getByTestId('subtitle-layer').textContent;
+
+    // Assert — wider screen packs more of the cue into chunk[0]
+    expect(wideText.length).toBeGreaterThan(narrowText.length);
+  });
+
+  it('runs the highlight on the VISIBLE chunk only', () => {
+    // Arrange — scripture ref lands in chunk[0]; a later chunk has no ref
+    const sub = {
+      ...BASE_SUB,
+      charsPerScreen: 14,
+      lines: 1,
+      highlightScripture: true,
+    };
+    const chunks = chunkText(LONG_TEXT, 14, 1);
+
+    // Act — edit pins chunk[0] (which contains "Salmos 23:1")
+    renderPreview({ videoSource: VIDEO_SOURCE, cues: LONG_CUE, mode: 'edit', subtitleConfig: sub });
+
+    // Assert — the ref renders highlighted in the visible chunk[0]
+    const layer = screen.getByTestId('subtitle-layer');
+    expect(chunks[0]).toContain('Salmos 23:1');
+    const ref = within(layer).getByText('Salmos 23:1');
+    expect(ref).toHaveStyle({ color: 'rgb(244, 192, 74)' });
+    // and the highlight is NOT applied to the whole cue — later chunks aren't even rendered
+    expect(layer.textContent).toBe(chunks[0]);
   });
 });
 

@@ -1,6 +1,6 @@
 import { Play } from 'lucide-react';
 import { SUBTITLE_ANCHOR_PERCENT } from '@gospelviral/shared';
-import { timestampToSeconds } from '../lib/helpers.js';
+import { timestampToSeconds, selectVisibleChunk } from '../lib/helpers.js';
 import { cueAt } from '../lib/cueAt.js';
 import { highlightText } from '../lib/text-highlight.js';
 import { useCanvasMeasurement } from '../hooks/useCanvasMeasurement.js';
@@ -34,7 +34,11 @@ function buildTextStyle(config) {
     backgroundColor: resolveBackgroundColor(config.background, config.bgColor),
     borderRadius: hasFill ? '4px' : '0',
     display: 'inline-block',
-    maxWidth: '92%',
+    // `lines` is a HARD visual cap (D3, decision #7): the chunk holds
+    // charsPerScreen×lines chars and the width is bounded to ~charsPerScreen
+    // `ch`, so the text wraps to roughly `lines` rows. `min(92%, …)` keeps it
+    // inside the 9:16 canvas on narrow screens.
+    maxWidth: `min(92%, ${config.charsPerScreen}ch)`,
   };
 }
 
@@ -197,8 +201,15 @@ export default function SubtitlePreview({
 
   // Subtitle text is DERIVED from currentTime — the active cue, or cue[0] when
   // paused / in edit (cueAt clamps), or the moment key_quote when no cues exist.
+  // The cue text is then chunked by the panel's charsPerScreen/lines (D3 — the
+  // panel is the SSOT for on-screen text shape; preview == export), and the
+  // visible chunk advances with currentTime inside the cue window. Edit mode
+  // pins chunk[0] (clock = window start). Highlight runs on the VISIBLE chunk.
   const cue = cueAt(cues, currentTime);
-  const subtitleText = cue?.text ?? moment.key_quote ?? moment.hook_title ?? '';
+  const sourceText = cue?.text ?? moment.key_quote ?? moment.hook_title ?? '';
+  const cueWindow = cue ? { start: cue.start, end: cue.end } : { start: startSec, end: endSec };
+  const clock = editable ? cueWindow.start : currentTime;
+  const subtitleText = selectVisibleChunk(sourceText, clock, cueWindow, config);
   const highlighted = highlightText(subtitleText, config);
   const anchorPercent = SUBTITLE_ANCHOR_PERCENT[config.position] ?? SUBTITLE_ANCHOR_PERCENT.bottom;
   const textStyle = buildTextStyle(config);
