@@ -1,6 +1,6 @@
 # Task Registry
-timestamp: 2026-05-28T00:00:00Z
-version: 1.5
+timestamp: 2026-05-29T00:00:00Z
+version: 1.7
 
 ## Overview
 
@@ -154,24 +154,57 @@ Architectural decisions promised by tasks land in `memory_bank/decisions/DEC_XXX
 - **Depends on**: TASK_010 (transcript already flows end-to-end)
 
 ### TASK_014: Video Upload — Backend Storage + Endpoint
-- **Status**: Ready
-- **Interface**: INPUT[`bootstrap-features-fases-3-6.md` §Fase 4, `apps/server` Hono app, env seam, logger, route conventions] → OUTPUT[`packages/shared/src/types.js` (`VideoSource` typedef, bilateral) + `apps/server/src/storage/video-storage.js` (`initVideoStorage`, `saveVideo`, `getVideoSourceById`, `streamVideoById` — atomic-write, idempotent boot cleanup) + `apps/server/src/routes/upload.js` (`POST /api/upload/video`, `GET /api/upload/video/:id/info`) + `config/env.js` extension (`VIDEO_UPLOAD_DIR`, `VIDEO_MAX_SIZE_BYTES`) + `server.js` wiring + root `.gitignore` for `apps/server/.tmp/` + Vitest suites (storage 10-case + route 7-case + env)]
+- **Status**: Complete (merged via PR #2 + follow-ups PR #3 on 2026-05-28)
+- **Interface**: INPUT[`bootstrap-features-fases-3-6.md` §Fase 4, `apps/server` Hono app, env seam, logger, route conventions] → OUTPUT[`packages/shared/src/types.js` (`VideoSource` + `VIDEO_MIME_ALLOWLIST_DEFAULT`) + `apps/server/src/lib/multipart-parser.js` (busboy streaming wrapper) + `apps/server/src/storage/video-storage.js` (factory: `init`/`save`/`get`/`stream`, streaming + atomic write + sidecar JSON) + `apps/server/src/routes/upload.js` (`POST /api/upload/video`, `GET /:id/info`) + `config/env.js` (`VIDEO_UPLOAD_DIR`/`MAX_UPLOAD_SIZE_BYTES`/`VIDEO_ALLOWED_MIMES`) + `server.js` wiring + `scripts/smoke-heap.js` + root `.gitignore` + Vitest suites]
 - **Confidence**: HIGH
-- **Black Box**: Server gains a typed multipart upload endpoint that writes to a gitignored temp dir, returns a `VideoSource` handle, and wipes the dir on every boot.
+- **Black Box**: Server gains a typed STREAMING multipart upload endpoint (O(KB) RAM, proven by `smoke:heap`) that writes to a gitignored temp dir, returns a `VideoSource` handle, wipes the dir on every boot. Streaming is an architectural INVARIANT.
 - **Phase**: 4
 - **Prerequisites**: ✅ P1+P2+P3 included
 - **File**: task_014_video_upload_backend.md
 - **Depends on**: TASK_005 (server scaffold, env, logger, route conventions)
 
 ### TASK_015: Video Upload — Frontend UI + Integration
-- **Status**: Ready
-- **Interface**: INPUT[TASK_014 OUTPUT (endpoint + `VideoSource` typedef), `App.jsx` session state, `ConfigPanel.jsx` 3-tab pattern, `lib/api.js` fetch pattern, `persistence.js` SSOT scope] → OUTPUT[`apps/web/src/lib/upload.js` (`uploadVideo` + typed `UploadError`) + `apps/web/src/components/VideoUploadButton.jsx` (stateless / controlled drag-drop + file picker) + `ConfigPanel.jsx` 4th tab "Vídeo Fonte" + header badge `filename · size` + `App.jsx` `videoSource` session state + `handleReset` clear + `ResultsView.jsx` pass-through + Vitest suites + Chrome DevTools MCP smoke]
+- **Status**: Complete (merged via PR #4 on 2026-05-29)
+- **Interface**: INPUT[TASK_014 OUTPUT (endpoint + `VideoSource` typedef), `App.jsx` session state, `ConfigPanel.jsx` 3-tab pattern, `lib/api.js` fetch pattern, `persistence.js` SSOT scope] → OUTPUT[`apps/web/src/lib/upload.js` (`uploadVideo` over XHR with progress/abort + typed `UploadError`) + `apps/web/src/components/VideoUploadButton.jsx` (controlled; EMPTY action-first / FILLED discrete; real progress; filename-aware error) + `ConfigPanel.jsx` 4th tab "Vídeo Fonte" + header badge + `App.jsx` `videoSource` session state + `handleReset` clear + `ResultsView.jsx` pass-through + Vitest suites + Chrome DevTools MCP smoke]
 - **Confidence**: MEDIUM (UX placement validated by smoke)
-- **Black Box**: Frontend gains a manual-upload affordance (no YouTube import, anywhere). `videoSource` lives in `App.jsx` session-only (NOT persisted). The 4th ConfigPanel tab "Vídeo Fonte" hosts the dropzone; the header strip shows the active badge. Resets clear it.
+- **Black Box**: Frontend gains a manual-upload affordance. `videoSource` lives in `App.jsx` session-only (NOT persisted). The 4th ConfigPanel tab "Vídeo Fonte" hosts the dropzone (two visual states); the header strip shows the active badge. Resets clear it. Real XHR upload progress.
 - **Phase**: 4
 - **Prerequisites**: ✅ P1+P2+P3 included
 - **File**: task_015_video_upload_frontend.md
 - **Depends on**: TASK_014 (endpoint + `VideoSource` typedef)
+
+### TASK_016: Video Stream Route (HTTP Range)
+- **Status**: Ready
+- **Interface**: INPUT[`bootstrap §Fase 5`, TASK_014 storage (`stream`/`get`) + upload router + `isValidVideoId`] → OUTPUT[`storage.streamRange(id, range?)` (createReadStream, O(KB)) + `lib/range.js` (pure char-scan Range parser) + `GET /api/upload/video/:id/stream` (200 full / 206 partial / 416 / 404 / 400) + storage + route + range Vitest suites]
+- **Confidence**: HIGH
+- **Black Box**: Server serves the uploaded video to a `<video>` element with HTTP Range support (206 Partial Content), streaming via `createReadStream` — never buffering the file. Size/mime from the sidecar `VideoSource`.
+- **Phase**: 5
+- **Prerequisites**: ✅ P1+P2+P3 included
+- **File**: task_016_video_stream_route.md
+- **Depends on**: TASK_014 (storage + upload router)
+- **smoke:heap**: TRIGGERED (touches storage/video-storage.js + routes/upload.js) — P3 runs `pnpm smoke:heap`
+
+### TASK_017: SubtitleCue Primitive (shared)
+- **Status**: Ready
+- **Interface**: INPUT[`bootstrap §Fase 5`, `apps/web/src/lib/transcript-extract.js` parser, TASK_013 promotion clause, `types.js`] → OUTPUT[`packages/shared/src/transcript-lines.js` (consolidated parser) + `packages/shared/src/subtitle-cues.js` (`buildSubtitleCues → SubtitleCue[]`) + `SubtitleCue` typedef + barrel + web `transcript-extract.js` delegates to shared (no dup) + Vitest suites]
+- **Confidence**: HIGH
+- **Black Box**: `SubtitleCue[]` becomes a bilateral primitive in `@gospelviral/shared` — the single source of truth for subtitle timing shared by the Phase 5 player and the Phase 6 burned-in export. One cue per transcript line (granularity untouched); `end` implied by the next line. Transcript parsing consolidated in shared (honors TASK_013 promotion clause).
+- **Phase**: 5
+- **Prerequisites**: ✅ P1+P2+P3 included
+- **File**: task_017_subtitle_cues.md
+- **Depends on**: TASK_013 (transcript-extract exists; gets consolidated)
+- **smoke:heap**: NOT triggered (no hot-path file)
+
+### TASK_018: Play + Subtitle Sync (frontend)
+- **Status**: Ready
+- **Interface**: INPUT[TASK_016 stream route, TASK_017 cues, TASK_015 videoSource, current `SubtitlePreview` + `useChunkRotation` + `MomentCard`/`App`] → OUTPUT[`useVideoPlayback` hook + `cueAt` selector + `SubtitlePreview` refactor (`<video>` + central play button + cue-driven subtitle + drag gated by mode + remove 2.2s rotation/badge) + `App.jsx` `playingIndex` + derived `mode` + pause-on-config-open + ResultsView/MomentCard threading + delete `useChunkRotation` + Vitest suites + Chrome DevTools MCP smoke]
+- **Confidence**: MEDIUM (global playback orchestration is the heaviest state)
+- **Black Box**: Each card's 9:16 preview plays the uploaded `<video>` with the subtitle synced to transcript timecodes. Panel-collapse doubles as a GLOBAL mode (PLAYER↔EDIÇÃO); single `playingIndex` in App enforces one-plays-at-a-time; opening a config tab pauses everything. The arbitrary 2.2s rotation is removed. No `videoSource` → today's static-thumbnail edit behavior (no regression).
+- **Phase**: 5
+- **Prerequisites**: ✅ P1+P2+P3 included
+- **File**: task_018_play_subtitle_sync.md
+- **Depends on**: TASK_015, TASK_016, TASK_017
+- **smoke:heap**: NOT triggered (frontend-only)
 
 ## Task Creation Log
 2026-05-27 TASK_001..TASK_012 created — Pass 1 high-level plan, awaiting human review before Pass 2 decomposition per task.
@@ -188,9 +221,14 @@ Architectural decisions promised by tasks land in `memory_bank/decisions/DEC_XXX
 2026-05-28 **TASK_014 + TASK_015 Pass 1 approved by human, with adjustments.** Both task files bumped to v1.1. Adjustments: (D3) `VideoSource` stays a **reference** to the file; if Phase 6 export needs server-side metadata (codec / fps / resolution / duration for FFmpeg) it lands as a separate module `apps/server/src/runtime/video-metadata.js`, NOT retrofitted into the primitive. Recorded in TASK_014 "Known follow-ups". (D5) the "Vídeo Fonte" tab has a hard two-state visual INVARIANT: EMPTY = generous drop area + prominent CTA "Subir vídeo do trecho" (action-first); FILLED = a single discrete line "filename · size · remover". The component test asserts the EMPTY container is taller and has the CTA, the MCP smoke captures both states. Without the distinction, the tab reads as "one more setting" and the conceptual frame breaks. (D6) size cap default raised 500 MiB → 2 GiB (`MAX_UPLOAD_SIZE_BYTES`, default `2147483648`); error copy updated to "Limite 2 GB". Operational notes from TASK_013 memories are referenced in both P2 + P3 sections of TASK_014 and TASK_015: [[sonar_env_sourcing]], [[pnpm_workspace_test_coverage_flake]], [[sonar_quality_gate_gotchas]].
 2026-05-28 **TASK_014 Pass 2 reviewed by human, streaming pipeline promoted to architectural INVARIANT.** Task file bumped to v1.2. Key change: the "parseBody buffers in RAM" item is no longer a risk to weigh — it is a hard contract. New DECs: (1) streaming-first pipeline `req.body → Readable.fromWeb → busboy wrapper → storage.save({ stream, ... }) → fs.createWriteStream → atomic rename`, memory residency `O(KB)` during a 2 GiB upload; (2) `busboy` chosen as the streaming multipart parser, wrapped in `apps/server/src/lib/multipart-parser.js` per §"Wrap external dependencies" so the route never imports busboy directly; (3) sidecar JSON `<id>.json` next to `<id>.<ext>` holds the typed `VideoSource` (filename, mime, uploadedAt preserved); (4) factory DI `createVideoStorage({ dir, logger })` mirrors `createAnalyzeRouter` / `createDetectRouter`; (5) test size-cap exercises use `maxBytes: 1024` injected via DI (no 2 GiB Blobs); (6) disk path `${dir}/${uuid}.${ext}`, original filename NEVER on disk (only in sidecar) — path traversal non-applicable by design, mime→ext from a whitelist table, uuid from `crypto.randomUUID()`; (7) heap-invariant smoke `smoke:heap` is **in-process** (Node script, imports storage + parser directly, samples `process.memoryUsage().heapUsed` every 100 ms during a 1.5 GiB upload, asserts `delta < 50 MB`) — NOT an HTTP debug endpoint (zero attack surface, measures JS heap not RSS). Smoke FAIL = PR BLOCKED, no bypass. Subtasks expanded 6 → 7 (multipart-parser wrapper becomes its own black box). The earlier "1.5 GiB curl smoke before merge" wording was replaced by the heap-invariant assertion.
 
+2026-05-29 **Phase 4 complete (PR #2 + #3 + #4 merged).** TASK_014 (backend streaming upload + smoke:heap invariant), TASK_014 follow-ups (smoke Gate B + parseBody invariant test), TASK_015 (frontend upload UI, XHR progress) all on `develop`. Upload validated in real use by human.
+2026-05-29 **TASK_016 + TASK_017 + TASK_018 created (Phase 5 Pass 1).** Three-task split for play + subtitle sync: TASK_016 = backend video stream route with HTTP Range (206) over `createReadStream` (smoke:heap TRIGGERED); TASK_017 = `SubtitleCue[]` bilateral primitive in `@gospelviral/shared` + transcript-parser consolidation (honors TASK_013 promotion clause); TASK_018 = frontend `<video>` player (central play button, GLOBAL mode derived from `isConfigCollapsed`, single `playingIndex` for one-plays-at-a-time, config-open-pauses, cue-driven subtitle replacing the removed 2.2s rotation, static-thumbnail fallback without `videoSource`). Pass 1 decisions pending human review: (D1) 3-task split by domain (server/shared/web); (D2) consolidate transcript parser into shared; (D3) storage `streamRange` + pure `lib/range.js`; (D4) `playingIndex` global in App + `mode` derived (not stored); (D5) EDIÇÃO shows static cue[0], PLAYER shows currentTime-driven cue; (D6) player only with `videoSource`; (D7) cue `end` = next cue start / last = segment end, absolute-timeline seconds; (D-end) pause-at-cut-end vs loop — flagged for human.
+
+2026-05-29 **Phase 5 Pass 1 approved by human; time-reference gap closed.** D4 (playingIndex global + derived mode) confirmed as the correct foundation. D-end = pause-at-cut-end CONFIRMED, with the added rule: pressing play after a pause-at-end RESTARTS from `timestamp_start` (not a no-op resume from `endSec`) — wired into `useVideoPlayback.play()` in TASK_018. NEW cross-task INVARIANT added to all three task files (016/017/018): **all time is seconds ABSOLUTE on the full uploaded video file's timeline** — transcript timestamps, `cue.start`/`cue.end`, `<video>.currentTime`, and the seek that drives the 206 Range request all share that one scale; cues are NEVER relative-to-cut (a 47:30 line → cue.start 2850); TASK_018 compares currentTime against cues with no offset math. This forbids the silent mismatch where one task assumes absolute and another relative, which would make the subtitle never sync. D1/D2/D3/D5/D6/D7 all confirmed. Execution order 016 → 017 → 018 (016/017 independent), human gate between each Pass 2.
+
 ## Task ID Sequence
-Last Used: TASK_015
-Next Available: TASK_016
+Last Used: TASK_018
+Next Available: TASK_019
 
 ## Conventions Snapshot (used by every task)
 

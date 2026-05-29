@@ -5,6 +5,7 @@ import {
   MultipartError,
 } from '../lib/multipart-parser.js';
 import { isValidVideoId } from '../lib/upload-validation.js';
+import { parseRangeHeader } from '../lib/range.js';
 import {
   EmptyFileError,
   UnsupportedMimeTypeError,
@@ -82,6 +83,41 @@ export function createUploadRouter({ storage, allowedMimes, maxBytes }) {
       return c.json({ error: { code: 'not_found', message: 'unknown id' } }, 404);
     }
     return c.json({ videoSource }, 200);
+  });
+
+  app.get('/:id/stream', async (c) => {
+    const id = c.req.param('id');
+    if (!isValidVideoId(id)) {
+      return err(c, 'invalid_id', 'id must be a v4 uuid');
+    }
+    const meta = await storage.get(id);
+    if (!meta) {
+      return c.json({ error: { code: 'not_found', message: 'unknown id' } }, 404);
+    }
+
+    const parsed = parseRangeHeader(c.req.header('range'), meta.sizeBytes);
+    if (parsed === 'unsatisfiable') {
+      return c.body(null, 416, { 'Content-Range': `bytes */${meta.sizeBytes}` });
+    }
+
+    const range = parsed || undefined; // null (garbage/absent) → full body
+    const out = await storage.streamRange(id, range);
+    const web = Readable.toWeb(out.stream);
+
+    if (range) {
+      const length = range.end - range.start + 1;
+      return c.body(web, 206, {
+        'Content-Type': out.mimeType,
+        'Content-Length': String(length),
+        'Content-Range': `bytes ${range.start}-${range.end}/${out.size}`,
+        'Accept-Ranges': 'bytes',
+      });
+    }
+    return c.body(web, 200, {
+      'Content-Type': out.mimeType,
+      'Content-Length': String(out.size),
+      'Accept-Ranges': 'bytes',
+    });
   });
 
   return app;

@@ -222,6 +222,52 @@ async function gateB() {
   return { ...result, writtenBytes };
 }
 
+/** A raw (no multipart envelope) Readable of `total` zero bytes, 64 KB at a time. */
+function rawZeroStream(total) {
+  let emitted = 0;
+  return new Readable({
+    read() {
+      if (emitted >= total) {
+        this.push(null);
+        return;
+      }
+      const remaining = total - emitted;
+      const slice = remaining >= CHUNK_BYTES ? CHUNK : CHUNK.subarray(0, remaining);
+      emitted += slice.length;
+      this.push(slice);
+    },
+  });
+}
+
+/**
+ * Gate C — the DOWNLOAD path (TASK_016). Saves a 1.5 GiB file, then drains
+ * `storage.streamRange(id)` fully while sampling heap. Proves the stream
+ * route reads lazily (createReadStream) and never buffers the file — a
+ * regression to `readFile` would balloon the heap and trip this gate.
+ */
+async function gateC() {
+  const { createVideoStorage } = await import('../src/storage/video-storage.js');
+  const dir = join(tmpdir(), `smoke-heap-C-${randomUUID()}`);
+  await mkdir(dir, { recursive: true });
+  const storage = createVideoStorage({ dir, logger: silentLogger });
+  await storage.init();
+
+  const { id } = await storage.save({
+    stream: rawZeroStream(TARGET_BYTES),
+    filename: 'big.mp4',
+    mimeType: 'video/mp4',
+  });
+
+  let drained = 0;
+  const result = await measureHeap(async () => {
+    const out = await storage.streamRange(id);
+    for await (const chunk of out.stream) drained += chunk.length;
+  });
+
+  await rm(dir, { recursive: true, force: true });
+  return { ...result, writtenBytes: drained };
+}
+
 function gateVerdict(r) {
   return r.deltaHeap < HEAP_DELTA_LIMIT && r.writtenBytes === TARGET_BYTES;
 }
@@ -260,21 +306,26 @@ async function run() {
   const bPass = gateVerdict(b);
   await writeCsv('heap-invariant-gate-b.csv', b, bPass);
 
+  const c = await gateC();
+  const cPass = gateVerdict(c);
+  await writeCsv('heap-invariant-gate-c.csv', c, cPass);
+
   // Keep the legacy combined filename pointing at Gate A for back-compat
   // with the TASK_014 PR evidence reference.
   await writeCsv('heap-invariant.csv', a, aPass);
 
   const out = [
     '== smoke:heap ==',
-    `target upload   : ${fmtBytes(TARGET_BYTES)}`,
-    ...gateLines('Gate A (parser + storage)', a, aPass),
-    ...gateLines('Gate B (route handler via app.fetch)', b, bPass),
-    `overall         : ${aPass && bPass ? 'PASS' : 'FAIL'}`,
+    `target          : ${fmtBytes(TARGET_BYTES)}`,
+    ...gateLines('Gate A (upload: parser + storage)', a, aPass),
+    ...gateLines('Gate B (upload: route via app.fetch)', b, bPass),
+    ...gateLines('Gate C (download: storage.streamRange)', c, cPass),
+    `overall         : ${aPass && bPass && cPass ? 'PASS' : 'FAIL'}`,
     `evidence        : ${EVIDENCE_DIR}`,
   ];
   console.log(out.join('\n'));
 
-  if (!aPass || !bPass) process.exit(1);
+  if (!aPass || !bPass || !cPass) process.exit(1);
 }
 
 run().catch((e) => {

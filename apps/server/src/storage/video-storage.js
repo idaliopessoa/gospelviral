@@ -165,5 +165,27 @@ export function createVideoStorage({ dir, logger }) {
     return createReadStream(join(dir, `${id}.${ext}`));
   }
 
-  return { init, save, get, stream };
+  /**
+   * Open a streaming read on the stored file, optionally for an inclusive
+   * byte range. Always `createReadStream` — NEVER buffers the file (see the
+   * streaming invariant; smoke:heap Gate C guards it).
+   *
+   * @param {string} id
+   * @param {{ start: number, end: number }} [range]  inclusive byte bounds
+   * @returns {Promise<{ stream: import('node:stream').Readable, size: number, mimeType: string } | null>}
+   */
+  async function streamRange(id, range) {
+    const meta = await get(id);
+    if (!meta) return null;
+    const ext = mimeToExt(meta.mimeType);
+    const filePath = join(dir, `${id}.${ext}`);
+    const opts = range ? { start: range.start, end: range.end } : undefined;
+    return {
+      stream: createReadStream(filePath, opts),
+      size: meta.sizeBytes,
+      mimeType: meta.mimeType,
+    };
+  }
+
+  return { init, save, get, stream, streamRange };
 }

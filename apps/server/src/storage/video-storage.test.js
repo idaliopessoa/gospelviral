@@ -205,4 +205,77 @@ describe('createVideoStorage', () => {
       }),
     ).rejects.toBeInstanceOf(UnsupportedMimeTypeError);
   });
+
+  it('streamRange() with no range returns the full file + size + mimeType', async () => {
+    // Arrange
+    await storage.init();
+    const payload = 'abcdefghij'; // 10 bytes
+    const { id } = await storage.save({
+      stream: streamFrom(payload),
+      filename: 'r.mp4',
+      mimeType: 'video/mp4',
+    });
+
+    // Act
+    const out = await storage.streamRange(id);
+    const chunks = [];
+    for await (const chunk of out.stream) chunks.push(chunk);
+
+    // Assert
+    expect(Buffer.concat(chunks).toString('utf-8')).toBe(payload);
+    expect(out.size).toBe(10);
+    expect(out.mimeType).toBe('video/mp4');
+  });
+
+  it('streamRange() with a byte range returns exactly that inclusive slice', async () => {
+    // Arrange
+    await storage.init();
+    const payload = 'abcdefghij'; // bytes 0..9
+    const { id } = await storage.save({
+      stream: streamFrom(payload),
+      filename: 's.mp4',
+      mimeType: 'video/mp4',
+    });
+
+    // Act — bytes [2,5] inclusive → "cdef"
+    const out = await storage.streamRange(id, { start: 2, end: 5 });
+    const chunks = [];
+    for await (const chunk of out.stream) chunks.push(chunk);
+
+    // Assert
+    expect(Buffer.concat(chunks).toString('utf-8')).toBe('cdef');
+    expect(out.size).toBe(10);
+  });
+
+  it('streamRange() returns null for an unknown id', async () => {
+    // Arrange
+    await storage.init();
+
+    // Act + Assert
+    expect(
+      await storage.streamRange('33333333-3333-3333-3333-333333333333'),
+    ).toBeNull();
+  });
+
+  it('streamRange() reads lazily (a 1 MB file does not balloon resident memory)', async () => {
+    // Arrange — write 1 MB, then read a tiny range; assert the returned
+    // stream is a fs ReadStream (createReadStream), not a buffered blob
+    await storage.init();
+    const big = Buffer.alloc(1024 * 1024, 7);
+    const { id } = await storage.save({
+      stream: Readable.from([big]),
+      filename: 'big.mp4',
+      mimeType: 'video/mp4',
+    });
+
+    // Act
+    const out = await storage.streamRange(id, { start: 0, end: 3 });
+
+    // Assert — node fs ReadStream exposes a `path` + `bytesRead`, a buffered
+    // Readable.from would not. Drain the 4 bytes.
+    expect(out.stream).toHaveProperty('path');
+    const chunks = [];
+    for await (const chunk of out.stream) chunks.push(chunk);
+    expect(Buffer.concat(chunks)).toHaveLength(4);
+  });
 });
