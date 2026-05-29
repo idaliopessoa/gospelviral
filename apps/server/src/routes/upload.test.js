@@ -182,4 +182,92 @@ describe('upload route', () => {
     expect(res.status).toBe(400);
     expect(body.error.code).toBe('invalid_id');
   });
+
+  async function uploadSample(payload = 'abcdefghij') {
+    const form = new FormData();
+    form.append('video', new Blob([Buffer.from(payload)], { type: 'video/mp4' }), 'v.mp4');
+    const created = await (await postMultipart(app, form)).json();
+    return created.videoSource;
+  }
+
+  function getStream(id, headers = {}) {
+    return app.fetch(
+      new Request(`http://localhost/api/upload/video/${id}/stream`, { headers }),
+    );
+  }
+
+  it('GET /:id/stream without Range returns 200 + Accept-Ranges + Content-Length + full body', async () => {
+    // Arrange
+    const vs = await uploadSample('abcdefghij'); // 10 bytes
+
+    // Act
+    const res = await getStream(vs.id);
+    const body = await res.text();
+
+    // Assert
+    expect(res.status).toBe(200);
+    expect(res.headers.get('accept-ranges')).toBe('bytes');
+    expect(res.headers.get('content-length')).toBe('10');
+    expect(res.headers.get('content-type')).toBe('video/mp4');
+    expect(body).toBe('abcdefghij');
+  });
+
+  it('GET /:id/stream with Range returns 206 + Content-Range + the exact slice', async () => {
+    // Arrange
+    const vs = await uploadSample('abcdefghij');
+
+    // Act — bytes 0-3 inclusive → "abcd"
+    const res = await getStream(vs.id, { Range: 'bytes=0-3' });
+    const body = await res.text();
+
+    // Assert
+    expect(res.status).toBe(206);
+    expect(res.headers.get('content-range')).toBe('bytes 0-3/10');
+    expect(res.headers.get('content-length')).toBe('4');
+    expect(res.headers.get('accept-ranges')).toBe('bytes');
+    expect(body).toBe('abcd');
+  });
+
+  it('GET /:id/stream with an unsatisfiable Range returns 416 + Content-Range */size', async () => {
+    // Arrange
+    const vs = await uploadSample('abcdefghij');
+
+    // Act
+    const res = await getStream(vs.id, { Range: 'bytes=99999-' });
+
+    // Assert
+    expect(res.status).toBe(416);
+    expect(res.headers.get('content-range')).toBe('bytes */10');
+  });
+
+  it('GET /:id/stream serves the full body when the Range header is garbage', async () => {
+    // Arrange
+    const vs = await uploadSample('abcdefghij');
+
+    // Act — garbage → treated as no range → 200 full
+    const res = await getStream(vs.id, { Range: 'pages=1-2' });
+    const body = await res.text();
+
+    // Assert
+    expect(res.status).toBe(200);
+    expect(body).toBe('abcdefghij');
+  });
+
+  it('GET /:id/stream for an unknown id returns 404', async () => {
+    // Arrange
+    const unknownId = '11111111-1111-1111-1111-111111111111';
+
+    // Act + Assert
+    expect((await getStream(unknownId)).status).toBe(404);
+  });
+
+  it('GET /:id/stream for an invalid id returns 400 invalid_id', async () => {
+    // Act
+    const res = await getStream('..%2Fetc');
+    const body = await res.json();
+
+    // Assert
+    expect(res.status).toBe(400);
+    expect(body.error.code).toBe('invalid_id');
+  });
 });
