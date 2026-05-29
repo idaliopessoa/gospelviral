@@ -21,6 +21,15 @@ const SRC_DIR = dirname(fileURLToPath(import.meta.url));
  * call `parseBody` (e.g. a tiny JSON-only endpoint where buffering is fine),
  * add the relative path here WITH a comment explaining why the streaming
  * invariant does not apply to it.
+ *
+ * Scope note: this grep targets `parseBody` only — it is the cheap, instant
+ * tripwire for the specific accessor flagged in TASK_014 Pass 2. It does NOT
+ * try to catch every body-buffering accessor (arrayBuffer / text / blob /
+ * formData), because some are legitimate elsewhere (e.g. analyze route reads
+ * a small JSON body via c.req.json()). The broad guarantee — "the upload
+ * route buffers nothing, by ANY method" — is enforced end-to-end by
+ * `pnpm smoke:heap` Gate B (route handler via app.fetch). The two layers are
+ * complementary: grep is fast and specific; the smoke is slow and total.
  */
 const PARSE_BODY_WHITELIST = new Set([
   // (empty) — no server file may call parseBody. Add "relative/path.js" + reason if ever needed.
