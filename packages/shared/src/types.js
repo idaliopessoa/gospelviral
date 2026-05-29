@@ -187,6 +187,18 @@ export const TOP_MOMENTS_COUNT = 5;
  */
 
 /**
+ * A single subtitle cue on the FULL VIDEO FILE timeline. The bilateral
+ * primitive for subtitle timing — shared by the Phase 5 live player (compares
+ * `<video>.currentTime` against `start`/`end`) and the Phase 6 burned-in
+ * export ("o que se vê é o que se queima"). Built by `buildSubtitleCues`.
+ *
+ * @typedef {Object} SubtitleCue
+ * @property {string} text   normalized cue text (timecodes stripped)
+ * @property {number} start  seconds, ABSOLUTE on the uploaded file timeline (a 47:30 line → 2850); NEVER relative to the cut
+ * @property {number} end    seconds, ABSOLUTE; == the next visible cue's start, last == segment endSec
+ */
+
+/**
  * Phase 4 default mime allowlist for video uploads. `mp4` covers H.264/H.265
  * containers from most editors; `quicktime` covers `.mov` (iPhone, Premiere);
  * `webm` is included at zero extra cost (VP8/VP9/AV1).

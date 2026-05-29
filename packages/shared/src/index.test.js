@@ -15,6 +15,10 @@ describe('@gospelviral/shared barrel', () => {
       'EXAMPLE_URL',
       'EXAMPLE_TRANSCRIPT',
       'EXAMPLE_RESPONSE',
+      'timestampToSeconds',
+      'parseTranscriptLines',
+      'normalizeCueText',
+      'buildSubtitleCues',
     ];
 
     // Act

@@ -1,3 +1,8 @@
+// `timestampToSeconds` is the canonical clock parser owned by @gospelviral/shared
+// (src/time.js — the cross-task TIME REFERENCE home). Re-exported here so web
+// consumers (MomentCard, transcript-extract) keep their existing import path.
+export { timestampToSeconds } from '@gospelviral/shared';
+
 /**
  * @param {string} url YouTube watch/short/embed URL
  * @returns {string|null} video id or null when no pattern matches
@@ -13,19 +18,6 @@ export function extractVideoId(url) {
     if (m) return m[1];
   }
   return null;
-}
-
-/**
- * @param {string} ts "MM:SS" or "HH:MM:SS"
- * @returns {number} seconds (0 on falsy or unrecognized)
- */
-export function timestampToSeconds(ts) {
-  if (!ts) return 0;
-  const parts = ts.split(':').map(Number);
-  if (parts.some((n) => Number.isNaN(n))) return 0;
-  if (parts.length === 2) return parts[0] * 60 + parts[1];
-  if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
-  return 0;
 }
 
 /**
