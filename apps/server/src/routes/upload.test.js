@@ -21,11 +21,11 @@ function freshDir() {
   return join(tmpdir(), `upload-route-test-${randomUUID()}`);
 }
 
-function buildApp({ storage, allowedMimes = ALLOWED_MIMES, maxBytes = TEST_MAX_BYTES }) {
+function buildApp({ storage, allowedMimes = ALLOWED_MIMES, maxBytes = TEST_MAX_BYTES, streamChunkBytes }) {
   const app = new Hono();
   app.route(
     '/api/upload/video',
-    createUploadRouter({ storage, allowedMimes, maxBytes }),
+    createUploadRouter({ storage, allowedMimes, maxBytes, streamChunkBytes }),
   );
   return app;
 }
@@ -238,6 +238,45 @@ describe('upload route', () => {
     // Assert
     expect(res.status).toBe(416);
     expect(res.headers.get('content-range')).toBe('bytes */10');
+  });
+
+  it('GET /:id/stream caps an open-ended bytes=START- to a bounded chunk (O2)', async () => {
+    // Arrange — 10-byte file, route capped to 4-byte chunks
+    const cappedApp = buildApp({ storage, streamChunkBytes: 4 });
+    const vs = await uploadSample('abcdefghij');
+
+    // Act — open-ended from 0 → bounded to 4 bytes, not streamed to EOF
+    const res = await cappedApp.fetch(
+      new Request(`http://localhost/api/upload/video/${vs.id}/stream`, {
+        headers: { Range: 'bytes=0-' },
+      }),
+    );
+    const body = await res.text();
+
+    // Assert — 206 with a capped Content-Range/Length; total size still /10
+    expect(res.status).toBe(206);
+    expect(res.headers.get('content-range')).toBe('bytes 0-3/10');
+    expect(res.headers.get('content-length')).toBe('4');
+    expect(body).toBe('abcd');
+  });
+
+  it('GET /:id/stream serves the next chunk on the follow-up open-ended request (O2)', async () => {
+    // Arrange
+    const cappedApp = buildApp({ storage, streamChunkBytes: 4 });
+    const vs = await uploadSample('abcdefghij');
+
+    // Act — the browser re-requests from where it left off
+    const res = await cappedApp.fetch(
+      new Request(`http://localhost/api/upload/video/${vs.id}/stream`, {
+        headers: { Range: 'bytes=4-' },
+      }),
+    );
+    const body = await res.text();
+
+    // Assert — next bounded chunk
+    expect(res.status).toBe(206);
+    expect(res.headers.get('content-range')).toBe('bytes 4-7/10');
+    expect(body).toBe('efgh');
   });
 
   it('GET /:id/stream serves the full body when the Range header is garbage', async () => {

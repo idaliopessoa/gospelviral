@@ -10,6 +10,7 @@
 
 import { isAbsolute, resolve } from 'node:path';
 import { VIDEO_MIME_ALLOWLIST_DEFAULT } from '@gospelviral/shared';
+import { DEFAULT_OPEN_RANGE_CHUNK_BYTES } from '../lib/range.js';
 
 const DEFAULT_PORT = 8787;
 const DEFAULT_LOG_LEVEL = 'info';
@@ -53,6 +54,12 @@ function parseMaxUploadSizeBytes(raw) {
   return Number.isFinite(n) && n > 0 ? n : DEFAULT_MAX_UPLOAD_SIZE_BYTES;
 }
 
+function parseStreamChunkBytes(raw) {
+  if (raw === undefined || raw === '') return DEFAULT_OPEN_RANGE_CHUNK_BYTES;
+  const n = Number.parseInt(raw, 10);
+  return Number.isFinite(n) && n > 0 ? n : DEFAULT_OPEN_RANGE_CHUNK_BYTES;
+}
+
 function parseVideoAllowedMimes(raw) {
   if (raw === undefined || raw === '') {
     return new Set(VIDEO_MIME_ALLOWLIST_DEFAULT);
@@ -73,6 +80,7 @@ function parseVideoAllowedMimes(raw) {
  * @property {string} videoUploadDir        absolute path; defaults to <cwd>/apps/server/.tmp/video-uploads
  * @property {number} maxUploadSizeBytes    defaults to 2 GiB (2_147_483_648)
  * @property {Set<string>} videoAllowedMimes mime allowlist for uploads
+ * @property {number} streamChunkBytes      open-ended range cap (O2); default 8 MiB
  */
 
 /**
@@ -87,6 +95,7 @@ export function readEnv() {
     videoUploadDir: parseVideoUploadDir(process.env.VIDEO_UPLOAD_DIR),
     maxUploadSizeBytes: parseMaxUploadSizeBytes(process.env.MAX_UPLOAD_SIZE_BYTES),
     videoAllowedMimes: parseVideoAllowedMimes(process.env.VIDEO_ALLOWED_MIMES),
+    streamChunkBytes: parseStreamChunkBytes(process.env.STREAM_CHUNK_BYTES),
   };
 }
 
