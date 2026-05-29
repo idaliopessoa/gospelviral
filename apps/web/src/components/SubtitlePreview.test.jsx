@@ -4,7 +4,14 @@ import SubtitlePreview from './SubtitlePreview.jsx';
 import { EXAMPLE_RESPONSE } from '@gospelviral/shared';
 import { chunkText } from '../lib/helpers.js';
 
-const MOMENT = EXAMPLE_RESPONSE.top_moments[0];
+// Default to a single-segment (keep_linear) moment so the cue/chunk tests are
+// isolated from cold-open segment transitions. The cold-open sequence has its
+// own describe below.
+const RAW_MOMENT = EXAMPLE_RESPONSE.top_moments[0];
+const MOMENT = {
+  ...RAW_MOMENT,
+  cold_open_analysis: { ...RAW_MOMENT.cold_open_analysis, decision: 'keep_linear' },
+};
 
 const BASE_SUB = {
   font: 'IBM Plex Sans',
@@ -67,8 +74,20 @@ beforeEach(() => {
   Element.prototype.setPointerCapture = vi.fn();
   Element.prototype.releasePointerCapture = vi.fn();
   Element.prototype.hasPointerCapture = vi.fn().mockReturnValue(true);
-  window.HTMLMediaElement.prototype.play = vi.fn().mockResolvedValue(undefined);
-  window.HTMLMediaElement.prototype.pause = vi.fn();
+  // Mock play/pause to DISPATCH the matching media events, mirroring a real
+  // element so the hook's event-driven `isPlaying` (and the play/pause
+  // affordance keyed off it) updates synchronously in the click gesture.
+  // Pausing an already-paused element fires NO 'pause' event (real behavior).
+  window.HTMLMediaElement.prototype.play = vi.fn(function play() {
+    this._playing = true;
+    this.dispatchEvent(new Event('play'));
+    return Promise.resolve();
+  });
+  window.HTMLMediaElement.prototype.pause = vi.fn(function pause() {
+    if (!this._playing) return;
+    this._playing = false;
+    this.dispatchEvent(new Event('pause'));
+  });
   Object.defineProperty(window.HTMLMediaElement.prototype, 'currentTime', {
     configurable: true,
     writable: true,
@@ -157,12 +176,53 @@ describe('SubtitlePreview — play button', () => {
     expect(onRequestPlay).toHaveBeenCalledTimes(1);
   });
 
-  it('hides the play button while this card is the active player', () => {
-    // Arrange + Act
+  it('while actively PLAYING, hides the play button and shows the pause control (D2)', () => {
+    // Arrange — active player
     renderPreview({ videoSource: VIDEO_SOURCE, cues: CUES, mode: 'player', isActivePlayer: true });
 
-    // Assert
+    // Act — start playback via the real gesture (play() → 'play' event)
+    act(() => fireEvent.click(screen.getByTestId('play-button')));
+
+    // Assert — play glyph gone, transparent pause control present
     expect(screen.queryByTestId('play-button')).not.toBeInTheDocument();
+    expect(screen.getByTestId('pause-button')).toBeInTheDocument();
+  });
+
+  it('clicking the pause control pauses (D2)', () => {
+    // Arrange — playing
+    renderPreview({ videoSource: VIDEO_SOURCE, cues: CUES, mode: 'player', isActivePlayer: true });
+    act(() => fireEvent.click(screen.getByTestId('play-button')));
+    window.HTMLMediaElement.prototype.pause.mockClear();
+
+    // Act
+    act(() => fireEvent.click(screen.getByTestId('pause-button')));
+
+    // Assert
+    expect(window.HTMLMediaElement.prototype.pause).toHaveBeenCalled();
+  });
+
+  it('a paused-but-active card shows the play/resume button again (D2)', () => {
+    // Arrange — active + playing, then paused (still the active card)
+    const onRequestPlay = vi.fn();
+    renderPreview({
+      videoSource: VIDEO_SOURCE,
+      cues: CUES,
+      mode: 'player',
+      isActivePlayer: true,
+      onRequestPlay,
+    });
+    act(() => fireEvent.click(screen.getByTestId('play-button'))); // start
+    act(() => fireEvent.click(screen.getByTestId('pause-button'))); // → pause event → isPlaying false
+
+    // Assert — resume affordance is back
+    const resume = screen.getByTestId('play-button');
+    expect(resume).toBeInTheDocument();
+
+    // Act — resume re-claims the slot and plays in place
+    onRequestPlay.mockClear();
+    act(() => fireEvent.click(resume));
+    expect(window.HTMLMediaElement.prototype.play).toHaveBeenCalled();
+    expect(onRequestPlay).toHaveBeenCalled();
   });
 
   it('shows no play button when there is no videoSource', () => {
@@ -171,6 +231,7 @@ describe('SubtitlePreview — play button', () => {
 
     // Assert
     expect(screen.queryByTestId('play-button')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('pause-button')).not.toBeInTheDocument();
   });
 });
 
@@ -386,5 +447,89 @@ describe('SubtitlePreview — overlay + drag gating', () => {
 
     // Assert — drag is gated off in player mode
     expect(onVideoConfigChange).not.toHaveBeenCalled();
+  });
+});
+
+describe('SubtitlePreview — cold-open playback sequence (D6)', () => {
+  // cut [100,120], peak [105,110] → segments [peak, cut]
+  const COLD_OPEN_MOMENT = {
+    ...RAW_MOMENT,
+    timestamp_start: '00:01:40',
+    timestamp_end: '00:02:00',
+    cold_open_analysis: {
+      ...RAW_MOMENT.cold_open_analysis,
+      decision: 'apply_cold_open',
+      peak_moment: { timestamp: '00:01:45-00:01:50', why_powerful: 'x' },
+    },
+  };
+
+  it('plays the peak, then seeks BACK to the full-cut start at the peak end', () => {
+    // Arrange
+    const onPlaybackEnd = vi.fn();
+    renderPreview({
+      videoSource: VIDEO_SOURCE,
+      cues: [],
+      mode: 'player',
+      isActivePlayer: true,
+      moment: COLD_OPEN_MOMENT,
+      onPlaybackEnd,
+    });
+    const video = screen.getByTestId('video-el');
+
+    // Act — reach the peak end (110) → advance to the cut start (100)
+    video.currentTime = 110;
+    act(() => fireEvent(video, new Event('timeupdate')));
+
+    // Assert — peak replays in context; not the end of playback yet
+    expect(video.currentTime).toBe(100);
+    expect(onPlaybackEnd).not.toHaveBeenCalled();
+  });
+
+  it('ends (onPlaybackEnd once) only at the full-cut end, not the peak end', () => {
+    // Arrange
+    const onPlaybackEnd = vi.fn();
+    renderPreview({
+      videoSource: VIDEO_SOURCE,
+      cues: [],
+      mode: 'player',
+      isActivePlayer: true,
+      moment: COLD_OPEN_MOMENT,
+      onPlaybackEnd,
+    });
+    const video = screen.getByTestId('video-el');
+
+    // Act — peak end advances; cut end finishes
+    video.currentTime = 110;
+    act(() => fireEvent(video, new Event('timeupdate')));
+    video.currentTime = 120;
+    act(() => fireEvent(video, new Event('timeupdate')));
+
+    // Assert
+    expect(onPlaybackEnd).toHaveBeenCalledTimes(1);
+  });
+
+  it('a keep_linear moment plays a single cut (no backward seek)', () => {
+    // Arrange — same cut, linear
+    const linear = { ...COLD_OPEN_MOMENT, cold_open_analysis: { ...COLD_OPEN_MOMENT.cold_open_analysis, decision: 'keep_linear' } };
+    const onPlaybackEnd = vi.fn();
+    renderPreview({
+      videoSource: VIDEO_SOURCE,
+      cues: [],
+      mode: 'player',
+      isActivePlayer: true,
+      moment: linear,
+      onPlaybackEnd,
+    });
+    const video = screen.getByTestId('video-el');
+
+    // Act — at 110 (mid-cut) nothing special happens; at 120 it ends
+    video.currentTime = 110;
+    act(() => fireEvent(video, new Event('timeupdate')));
+    expect(video.currentTime).toBe(110); // no backward seek
+    video.currentTime = 120;
+    act(() => fireEvent(video, new Event('timeupdate')));
+
+    // Assert
+    expect(onPlaybackEnd).toHaveBeenCalledTimes(1);
   });
 });

@@ -30,8 +30,21 @@ beforeEach(() => {
   Element.prototype.setPointerCapture = vi.fn();
   Element.prototype.releasePointerCapture = vi.fn();
   Element.prototype.hasPointerCapture = vi.fn().mockReturnValue(true);
-  window.HTMLMediaElement.prototype.play = vi.fn().mockResolvedValue(undefined);
-  window.HTMLMediaElement.prototype.pause = vi.fn();
+  // play/pause DISPATCH the matching media events (mirroring a real element) so
+  // the hook's event-driven `isPlaying` — and the play/pause affordance keyed
+  // off it — updates synchronously within the click gesture. Pausing an
+  // already-paused element fires NO 'pause' event (real behavior), so the
+  // mount-time reactive pause on never-played cards is a silent no-op.
+  window.HTMLMediaElement.prototype.play = vi.fn(function play() {
+    this._playing = true;
+    this.dispatchEvent(new Event('play'));
+    return Promise.resolve();
+  });
+  window.HTMLMediaElement.prototype.pause = vi.fn(function pause() {
+    if (!this._playing) return;
+    this._playing = false;
+    this.dispatchEvent(new Event('pause'));
+  });
   Object.defineProperty(window.HTMLMediaElement.prototype, 'currentTime', {
     configurable: true,
     writable: true,
@@ -114,8 +127,9 @@ describe('App — playback orchestration', () => {
     expect(screen.queryAllByTestId('play-button')).toHaveLength(0);
   });
 
-  it('pauses at the cut end — the play button reappears when playback reaches endSec', async () => {
-    // Arrange — play card 1 (moment[0] ends at 02:15 = 135s)
+  it('pauses at the cut end — the play button reappears when playback ends (D6 cold-open sequence)', async () => {
+    // Arrange — moment[0] is apply_cold_open: peak 01:08–01:25 (68–85), cut
+    // 01:08–02:15 (68–135). Playback runs the peak, then the full cut.
     await loadResultsWithVideo();
     fireEvent.click(screen.getByRole('button', { name: /Recolher/ }));
     const cards = screen.getAllByRole('article');
@@ -123,13 +137,42 @@ describe('App — playback orchestration', () => {
     expect(within(cards[0]).queryByTestId('play-button')).not.toBeInTheDocument();
     const video = within(cards[0]).getByTestId('video-el');
 
-    // Act — playback reaches the cut end
+    // Act — peak end (85) advances to the cut start (no end yet)…
+    video.currentTime = 85;
+    act(() => fireEvent(video, new Event('timeupdate')));
+    expect(video.currentTime).toBe(68); // seeked back to the full-cut start
+    expect(within(cards[0]).queryByTestId('play-button')).not.toBeInTheDocument();
+    // …then the cut end (135) finishes the sequence
     video.currentTime = 135;
     act(() => fireEvent(video, new Event('timeupdate')));
 
     // Assert — paused at end → card 1 is no longer the active player, button back
     expect(window.HTMLMediaElement.prototype.pause).toHaveBeenCalled();
     expect(within(cards[0]).getByTestId('play-button')).toBeInTheDocument();
+  });
+
+  it('pauses a playing card in place and resumes it (paused-but-active, one-at-a-time) (D2)', async () => {
+    // Arrange — play card 1
+    await loadResultsWithVideo();
+    fireEvent.click(screen.getByRole('button', { name: /Recolher/ }));
+    const cards = screen.getAllByRole('article');
+    fireEvent.click(within(cards[0]).getByTestId('play-button'));
+
+    // Act — pause card 1 in place (click its pause control)
+    fireEvent.click(within(cards[0]).getByTestId('pause-button'));
+
+    // Assert — card 1 shows the resume button again; the other cards still
+    // show their play button (card 1 stayed the active card — one-at-a-time).
+    expect(within(cards[0]).getByTestId('play-button')).toBeInTheDocument();
+    expect(within(cards[1]).getByTestId('play-button')).toBeInTheDocument();
+
+    // Act — resume card 1
+    window.HTMLMediaElement.prototype.play.mockClear();
+    fireEvent.click(within(cards[0]).getByTestId('play-button'));
+
+    // Assert — plays again, pause control back
+    expect(window.HTMLMediaElement.prototype.play).toHaveBeenCalled();
+    expect(within(cards[0]).getByTestId('pause-button')).toBeInTheDocument();
   });
 
   it('flips PLAYER↔EDIÇÃO with the collapse control', async () => {
