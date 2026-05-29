@@ -1,52 +1,10 @@
+import { parseTranscriptLines, normalizeCueText } from '@gospelviral/shared';
 import { timestampToSeconds } from './helpers.js';
 
-function isDigits(s, min, max) {
-  if (s.length < min || s.length > max) return false;
-  for (let i = 0; i < s.length; i++) {
-    const c = s.charCodeAt(i);
-    if (c < 48 || c > 57) return false;
-  }
-  return true;
-}
-
-function parseTimestampPrefix(raw) {
-  const space = raw.indexOf(' ');
-  if (space <= 0) return null;
-  const head = raw.slice(0, space);
-  const parts = head.split(':');
-  if (parts.length < 2 || parts.length > 3) return null;
-  for (let i = 0; i < parts.length - 1; i++) {
-    if (!isDigits(parts[i], 1, 2)) return null;
-  }
-  if (!isDigits(parts[parts.length - 1], 2, 2)) return null;
-  const tsSec =
-    parts.length === 3
-      ? Number(parts[0]) * 3600 + Number(parts[1]) * 60 + Number(parts[2])
-      : Number(parts[0]) * 60 + Number(parts[1]);
-  let textStart = space + 1;
-  while (textStart < raw.length && raw.charCodeAt(textStart) === 32) textStart++;
-  return { tsSec, text: raw.slice(textStart) };
-}
-
-function parseTranscriptLines(transcript) {
-  if (typeof transcript !== 'string' || transcript.length === 0) return [];
-  const out = [];
-  for (const raw of transcript.split('\n')) {
-    const parsed = parseTimestampPrefix(raw);
-    if (parsed) {
-      out.push(parsed);
-      continue;
-    }
-    if (out.length === 0) continue;
-    const trimmed = raw.trim();
-    if (trimmed) out[out.length - 1].text += ` ${trimmed}`;
-  }
-  return out;
-}
-
-function normalize(text) {
-  return text.replace(/\s+/g, ' ').trim();
-}
+// Transcript line-parsing + normalization live in @gospelviral/shared
+// (transcript-lines.js) — the single parser shared with the Phase 5/6 subtitle
+// cues. This module keeps only the web-only segment-slicing surface that
+// MomentCard consumes; its public behavior is unchanged (TASK_017 / DEC D2).
 
 /**
  * Slice a transcript by moment range and return the matching cues
@@ -66,7 +24,7 @@ export function extractSegmentLines(transcript, startTs, endTs) {
   if (lines.length === 0) return [];
   return lines
     .filter((l) => l.tsSec >= startSec && l.tsSec < endSec)
-    .map((l) => normalize(l.text))
+    .map((l) => normalizeCueText(l.text))
     .filter((t) => t.length > 0);
 }
 
