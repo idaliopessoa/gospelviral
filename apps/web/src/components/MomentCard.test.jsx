@@ -135,15 +135,19 @@ describe('MomentCard', () => {
     expect(screen.getByText(/Score breakdown · theological check/i)).toBeInTheDocument();
   });
 
-  it('default activeCardTab="redes-sociais" shows caption + hashtags + CTA, hides extracted transcript text', () => {
+  it('default activeCardTab="redes-sociais" tab body shows caption + hashtags + CTA, not the transcript line list', () => {
     // Arrange + Act
     const { container } = render(<MomentCard {...BASE_PROPS} />);
 
     // Assert
     expect(container.textContent).toContain('Três horas da manhã. Chão do quarto.'); // caption
     expect(container.textContent).toContain(MOMENT.cta.primary);
-    // Legenda do Vídeo extracted text (from EXAMPLE_TRANSCRIPT, 01:08-02:15) is NOT visible
-    expect(container.textContent).not.toContain('eu fiz uma oração que mudou tudo');
+    // The Legenda do Vídeo line list lives in the OTHER tab body — not in the
+    // active redes-sociais tabpanel. (The transcript text also legitimately
+    // appears in the preview subtitle now that it is cue-driven, so scope the
+    // negative assertion to the active tabpanel.)
+    const tabpanel = container.querySelector('[role="tabpanel"]');
+    expect(tabpanel.textContent).not.toContain('eu fiz uma oração que mudou tudo');
   });
 
   it('activeCardTab="legenda-video" shows the transcript text sliced between timestamp_start and timestamp_end (no timecodes) + Copiar button', () => {

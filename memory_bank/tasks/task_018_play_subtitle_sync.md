@@ -110,14 +110,29 @@ Make each card's 9:16 preview play the uploaded source video with the subtitle s
 
 ## Prerequisite Subtasks (MANDATORY)
 ### SUBTASK_018.P1: GitFlow
-**Status**: ⏱️ Not Started — branch `feature/task-018-play-subtitle-sync` from `develop`; commits `(player)`/`(card)`/`(app)`; PR → develop; Co-Authored-By
+**Status**: ✅ Complete — branch `feature/task-018-play-subtitle-sync` from `develop`; commits `c423bfd (player)` + `6854cb7 (fix)`; Co-Authored-By trailer; PR → develop (open, awaiting human gate)
 ### SUBTASK_018.P2: Tests
-**Status**: ⏱️ Not Started — TDD/AAA; ≥ 80% on new hooks; existing SubtitlePreview/MomentCard suites green (additive); CC ≤ 15
+**Status**: ✅ Complete — TDD/AAA; new hooks ≥ 80% (`cueAt` 100%, `useVideoPlayback` 100% lines / 95% branch); existing SubtitlePreview/MomentCard suites green (additive props; MomentCard redes-sociais negative assertion scoped to the tabpanel since the subtitle is now cue-driven); CC ≤ 15. web 188 / shared 51 / server 157 all green
 ### SUBTASK_018.P3: Finalization
-**Status**: ⏱️ Not Started — lint 0; per-workspace coverage; `pnpm sonar` PASS + S3776=0; Chrome DevTools MCP smoke (player playing + edit static screenshots, console clean); evidence dir `memory_bank/tasks/evidence/task_018/`; auditor; PR with SonarCloud block (smoke:heap "not triggered: frontend-only")
+**Status**: ✅ Complete — `pnpm lint` 0; per-workspace coverage; `pnpm sonar` QG **PASS**, `javascript:S3776` new-code = **0**, total new-code issues = **0**, new coverage 95.8%; Chrome DevTools MCP smoke captured (`memory_bank/tasks/evidence/task_018/`); black-box-auditor → AUDITORIA LIMPA; PR carries the SonarCloud block. **smoke:heap = NOT triggered** (frontend-only: touches none of upload route / video-storage / multipart-parser, per [[smoke_heap_invariant_trigger_files]])
 
-## Subtasks (Pass 2 will decompose)
-- SUBTASK_018.1 — `cueAt` selector + `useVideoPlayback` hook + tests
-- SUBTASK_018.2 — `SubtitlePreview` refactor (`<video>` + play button + cue sync + drag-gate + remove rotation) + tests
-- SUBTASK_018.3 — App `playingIndex` + derived mode + pause-on-config + ResultsView/MomentCard threading + integration tests
-- SUBTASK_018.4 — delete `useChunkRotation`; MCP smoke + sonar + auditor + PR
+## Subtasks (Pass 2 — executed)
+- SUBTASK_018.1 — ✅ `lib/cueAt.js` pure selector + `hooks/useVideoPlayback.js` (callback ref; play sync in gesture, pause reactive; pause@endSec; restart-on-replay; reset clock on unmount; swallow benign play() rejection) + tests
+- SUBTASK_018.2 — ✅ `SubtitlePreview` refactor (`<video>`/thumbnail, central play button, cue-driven subtitle, drag gated to edit, N/M badge removed) + test rewrite
+- SUBTASK_018.3 — ✅ App `playingIndex` SSOT + derived `mode` + `handleCollapseChange` pause-on-edit chokepoint + ResultsView/MomentCard threading + integration tests (one-at-a-time, config-pause, mode flip, pause-at-cut-end)
+- SUBTASK_018.4 — ✅ deleted `useChunkRotation`; MCP smoke + sonar + auditor + PR
+
+## MCP smoke findings (real MP4 upload)
+- **Network requests on PLAYER mount (the measurement requested at Pass 2): 5 `<video preload="metadata">` → 7 GET `/stream` requests, all 206 Partial Content.** 2 extra over 5 = the faststart `moov` fetch on a couple of elements; not a 5×N storm, view rendered fine. `preload="metadata"` fetches only the small metadata range (not the file), so this stays light on a real large source → **lazy-mount-only-active stays a follow-up, NOT promoted**. Decision was measured, not guessed.
+- Behavior verified: one-plays-at-a-time (play card 1 → 4 buttons; play card 2 → card 1 restored), cue sync (t=68s → cue[0] "E eu fiz uma oração…", t=90s → cue[1] "E irmãos…"), config-open pauses everything (0 videos, thumbnails return), EDIÇÃO shows cue[0], console clean.
+- Two smoke-caught fixes (commit `6854cb7`, both unit-pinned): swallow benign `play()` rejection (console-clean); reset `currentTime` on `<video>` unmount so EDIÇÃO shows cue[0] not the last-played position.
+
+## SonarCloud (local `@sonar/scan` — repo has zero CI)
+- Scan run: 2026-05-29 (analysisId `AZ50AYgySBqjfcpfUQt0`)
+- Commit scanned: `6854cb7`
+- Branch: `feature/task-018-play-subtitle-sync`
+- Quality Gate: **PASS**
+- New-code coverage: 95.8%
+- New-code issues: 0 (Blocker: 0, Critical: 0, Major: 0)
+- `javascript:S3776` (Cognitive Complexity) on new code: **0**
+- new_security_hotspots_reviewed: 100% · new_duplicated_lines_density: 0.0%
