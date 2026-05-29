@@ -66,6 +66,8 @@ export default function ResultsView({
   setVideoConfig,
   overlayConfig,
   setOverlayConfig,
+  videoSource,
+  setVideoSource,
   activeTab,
   setActiveTab,
   activeCardTab,
@@ -82,6 +84,8 @@ export default function ResultsView({
         setVideoConfig={setVideoConfig}
         overlayConfig={overlayConfig}
         setOverlayConfig={setOverlayConfig}
+        videoSource={videoSource}
+        setVideoSource={setVideoSource}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         isCollapsed={isCollapsed}

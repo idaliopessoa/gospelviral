@@ -72,6 +72,10 @@ export default function App() {
   const [overlayConfig, setOverlayConfig] = useState(initialPresets.overlayConfig);
   const [activeTab, setActiveTab] = useState('subtitle');
   const [activeCardTab, setActiveCardTab] = useState('redes-sociais');
+  // Session-only handle to the uploaded source video. Deliberately NOT
+  // persisted (it is a server-side reference invalidated on server reboot —
+  // see persistence.js + TASK_015).
+  const [videoSource, setVideoSource] = useState(null);
   const [isConfigCollapsed, setIsConfigCollapsed] = useState(
     initialPresets.isConfigCollapsed,
   );
@@ -104,6 +108,7 @@ export default function App() {
 
   function handleReset() {
     setExampleVideoId(null);
+    setVideoSource(null);
     reset();
   }
 
@@ -151,6 +156,8 @@ export default function App() {
           setVideoConfig={setVideoConfig}
           overlayConfig={overlayConfig}
           setOverlayConfig={setOverlayConfig}
+          videoSource={videoSource}
+          setVideoSource={setVideoSource}
           activeTab={activeTab}
           setActiveTab={setActiveTab}
           activeCardTab={activeCardTab}
