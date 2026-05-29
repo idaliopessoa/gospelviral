@@ -4,8 +4,8 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "node --watch src/server.js",
-    "start": "node src/server.js",
+    "dev": "node --watch --env-file-if-exists=../../.env.local src/server.js",
+    "start": "node --env-file-if-exists=../../.env.local src/server.js",
     "build": "echo 'no build step (node esm)'",
     "smoke:api": "node scripts/smoke-api.js",
     "smoke:cli": "node scripts/smoke-cli.js",

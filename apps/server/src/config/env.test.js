@@ -99,15 +99,15 @@ describe('readEnv', () => {
     expect(readEnv().logLevel).toBe('info');
   });
 
-  it('parses ANALYZE_TIMEOUT_MS as integer with a 120_000 default', async () => {
+  it('parses ANALYZE_TIMEOUT_MS as integer with a 600_000 default (TASK_020)', async () => {
     // Arrange
     delete process.env.ANALYZE_TIMEOUT_MS;
 
     // Act
     const { readEnv } = await import('./env.js');
 
-    // Assert
-    expect(readEnv().analyzeTimeoutMs).toBe(120_000);
+    // Assert — 10 min: a real CLI analysis runs for minutes; 120 s killed it
+    expect(readEnv().analyzeTimeoutMs).toBe(600_000);
 
     // Arrange
     process.env.ANALYZE_TIMEOUT_MS = '60000';

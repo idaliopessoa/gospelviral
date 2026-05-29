@@ -242,6 +242,41 @@ describe('POST /api/analyze', () => {
     expect(body.code).toBe('timeout');
   });
 
+  it('returns 504 when the client/proxy DISCONNECTS mid-analysis (the spurious-504 bug, TASK_020)', async () => {
+    // Arrange — adapter only settles when its signal aborts (CLI killed mid-run);
+    // a generous app timeout proves the 504 came from the disconnect, NOT the timer.
+    const runViaCli = vi.fn((args) =>
+      new Promise((_, reject) => {
+        args.signal.addEventListener('abort', () => {
+          const e = new Error('Aborted');
+          e.name = 'AbortError';
+          reject(e);
+        });
+      }),
+    );
+    const app = withDeps({ runViaCli, timeoutMs: 600_000 });
+    const ac = new AbortController();
+    const req = new Request('http://localhost/', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(VALID_BODY),
+      signal: ac.signal,
+    });
+
+    // Act — start the request, let the handler reach the adapter await, then
+    // simulate the dev proxy / browser dropping the long-held connection.
+    const resP = app.fetch(req);
+    await new Promise((r) => setTimeout(r, 10));
+    ac.abort();
+    const res = await resP;
+    const body = await res.json();
+
+    // Assert — the disconnect (c.req.raw.signal), not the 10-min timer, yields 504
+    expect(res.status).toBe(504);
+    expect(body.code).toBe('timeout');
+    expect(runViaCli).toHaveBeenCalled();
+  });
+
   it('passes the resolved binPath to the CLI adapter', async () => {
     // Arrange
     const runViaCli = vi.fn().mockResolvedValue(EXAMPLE_RESPONSE);

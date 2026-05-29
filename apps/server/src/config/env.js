@@ -14,7 +14,10 @@ import { DEFAULT_OPEN_RANGE_CHUNK_BYTES } from '../lib/range.js';
 
 const DEFAULT_PORT = 8787;
 const DEFAULT_LOG_LEVEL = 'info';
-const DEFAULT_ANALYZE_TIMEOUT_MS = 120_000;
+// A real CLI analysis of a full sermon transcript takes several minutes, so the
+// default must comfortably exceed that (TASK_020): 120 s killed every real run
+// before it finished. 10 min matches the intended `.env.local` override.
+const DEFAULT_ANALYZE_TIMEOUT_MS = 600_000;
 const DEFAULT_VIDEO_UPLOAD_DIR_REL = 'apps/server/.tmp/video-uploads';
 const DEFAULT_MAX_UPLOAD_SIZE_BYTES = 2_147_483_648; // 2 GiB
 

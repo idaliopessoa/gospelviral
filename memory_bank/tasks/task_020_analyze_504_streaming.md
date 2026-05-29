@@ -1,9 +1,9 @@
 # TASK_020: Analyze long-run resilience — kill the spurious 504
 timestamp: 2026-05-29T00:00:00Z
 version: 1.0
-status: Planning
+status: Active — fix implemented + user-verified (200); pending gates + PR
 owner: unassigned
-confidence: LOW
+confidence: HIGH (root cause pinned by spike + fix verified with a real run)
 phase: 5 (spun out of TASK_019 / O1)
 
 > Spun out of the TASK_018 follow-up (defect O1) per human decision — it is architectural (touches the `/api/analyze` transport contract, may reverse DEC_021 "JSON-only"). Investigated context in `memory_bank/tasks/evidence/local-smoke/task_018_playback_bug.md` (§504 root) + `task_018_followup_INSUMOS.md` (O1).
@@ -78,6 +78,26 @@ Whatever fires first → socket closes → `c.req.raw.signal` aborts → 504. **
 3. Confirm **prod relevance** (`pnpm build` + static serve hitting `:8787` directly — still drops?).
 4. Output: a DEC fixing the approach (A/B/C) on measured evidence.
 
+### Spike result (020.1) — ROOT CAUSE CORRECTED ✅
+The deterministic test + a real repro **disproved the disconnect hypothesis.** The `[analyze-diag]` instrument on a real "Analisar" logged:
+```
+[analyze-diag] abort=app_timeout elapsedMs=120001 timeoutMs=120000
+```
+- The abort was the **app's own timer at 120 s**, NOT a client/proxy disconnect.
+- `timeoutMs=120000` = the **default** (`DEFAULT_ANALYZE_TIMEOUT_MS` in `env.js`), NOT the `600000` in `.env.local`.
+- Cause: **`.env.local` is never loaded** by `pnpm dev` (`node --watch` with no dotenv / `--env-file`; nothing in `apps/server/src` reads it). So `ANALYZE_TIMEOUT_MS=600000` is dead in dev → the route runs with the 2-min default → a real multi-minute CLI analysis is killed at 120 001 ms → 504. Deterministic, not flaky.
+- Confirmed `node --env-file-if-exists=../../.env.local` loads `ANALYZE_TIMEOUT_MS=600000` (`.env.local` is plain `KEY=VALUE`).
+
+**Approach pivot (evidence-based):** the 504 is a **config-loading + timeout-policy** bug, NOT a transport/disconnect problem. SSE/heartbeat (options A/B) are **descoped** from the critical fix (kept as a ROADMAP UX/robustness item — no-feedback wait + genuinely-long runs). DEC_021 is **NOT** reversed.
+
+**Fix (020.2), in order of evidence:**
+1. **Load `.env.local` in the server** — `dev`/`start` scripts use `node --env-file-if-exists=../../.env.local …` so the configured `ANALYZE_TIMEOUT_MS` (and PORT/LOG_LEVEL) actually apply. (Applied; pending user re-test.)
+2. **Raise the too-low default** `DEFAULT_ANALYZE_TIMEOUT_MS` (120 s → a value ≥ a real analysis, e.g. 600 s) so prod / no-`.env.local` is sane too.
+3. Keep the `[analyze-diag]` reason/elapsed log as a structured server log (or remove) — decide in 020.2.
+4. Re-test: if a >timeout run now shows `abort=client_disconnect` before the timer, THEN (and only then) revisit the transport keep-alive.
+
+**Complexity now LOWER** (config + a constant; single domain) → decomposition likely unnecessary; 020.1 (spike, done) + 020.2 (fix + tests) suffice, 020.3 (web consumer) only if the transport actually changes (it won't, under this fix).
+
 ## TASK_COMPLEXITY_ASSESSMENT
 COMPONENTS: MEDIUM (analyze route · api.js · server bootstrap/timeouts · `AnalyzingView` if progress · vite/prod proxy). INTERFACES: MEDIUM–HIGH (the analyze transport wire; SSE amends DEC_021 but keeps api.js's public surface). DOMAINS: LOW–MEDIUM (backend transport + thin web consumer). COGNITIVE_LOAD: MEDIUM (single context). → **Two+ MEDIUM → DECOMPOSITION RECOMMENDED (light, Pass 2):** `020.1` diagnosis spike (+DEC) → `020.2` server transport (heartbeat + terminal result/error; abort/timeout still typed) → `020.3` web consumer (api.js consumes the stream, still resolves `AnalysisResponse`; optional real `AnalyzingView` progress). Hard edge: 020.1 → 020.2 → 020.3. **Confidence stays LOW until 020.1; expected MEDIUM/HIGH after, approach locked by DEC.**
 
@@ -86,7 +106,7 @@ COMPONENTS: MEDIUM (analyze route · api.js · server bootstrap/timeouts · `Ana
 > Dependency: **020.1 → 020.2 → 020.3** (hard chain — the spike's DEC picks the approach the next two implement). One branch `feature/task-020-analyze-504`.
 
 ### SUBTASK_020.1: Diagnosis spike + approach DEC
-**Status**: ⏱️ Not Started
+**Status**: ✅ Complete — root cause = app-timeout at the 120 s default because `.env.local` (600 s) is never loaded by `pnpm dev`; disconnect hypothesis disproved. Deterministic disconnect→504 test added; pivot recorded (see Spike result).
 #### Black Box Interface
 **INPUT**: `routes/analyze.js` (`withTimeout`), `vite.config.js`, `server.js`; the 504 evidence; a **slow/aborting stub adapter via DI** (`createAnalyzeRouter({ runViaCli })`) — no real LLM. A throwaway slow route for live proxy/direct/prod-build measurement.
 **OUTPUT**: (1) deterministic server tests proving **disconnect (`c.req.raw.signal`) → 504** vs **app-timeout → 504** vs **success-before-either → 200** (locks the legit path apart from the bug); (2) measured evidence of WHERE/WHEN the connection drops (dev proxy `:5173` vs direct `:8787` vs `pnpm build` static + direct); (3) a **DEC** fixing the approach (A SSE / B heartbeat / C tune) on that evidence. Evidence dir: `memory_bank/tasks/evidence/task_020/`.
@@ -97,8 +117,8 @@ COMPONENTS: MEDIUM (analyze route · api.js · server bootstrap/timeouts · `Ana
 - [ ] DEC written choosing A/B/C with the evidence.
 #### Dependencies — Depends on: none · Blocks: 020.2. Effort: Medium.
 
-### SUBTASK_020.2: Server transport — keep the long connection alive
-**Status**: ⏱️ Not Started
+### SUBTASK_020.2: Fix — load `.env.local` + sane default timeout (pivoted from "transport")
+**Status**: ✅ Implemented (user-verified 200) — `dev`/`start` use `node --env-file-if-exists=../../.env.local`; `DEFAULT_ANALYZE_TIMEOUT_MS` 120 s → 600 s; temp `[analyze-diag]` removed; disconnect→504 test retained. NOTE: scope pivoted from SSE/heartbeat (the spike disproved the disconnect cause). Original transport text below kept for history.
 #### Black Box Interface
 **INPUT**: 020.1 DEC (chosen approach); `routes/analyze.js`; `server.js` (explicit Node timeouts if needed).
 **OUTPUT**: the chosen transport — (A) flush `200`+headers early + periodic `heartbeat` + terminal `result`|`error` event (SSE), or (B) heartbeat-padded JSON — so no intermediary idle-closes the socket; a genuine over-`ANALYZE_TIMEOUT_MS` run still returns a **typed** timeout; AUTO==CLI path preserved. Tests: heartbeat emitted, terminal result, terminal error, disconnect, timeout. CC ≤ 15 (extract the heartbeat/stream writer).
@@ -109,7 +129,7 @@ COMPONENTS: MEDIUM (analyze route · api.js · server bootstrap/timeouts · `Ana
 #### Dependencies — Depends on: 020.1 · Blocks: 020.3. Effort: Medium–High.
 
 ### SUBTASK_020.3: Web consumer — stream-aware api.js (contract stable)
-**Status**: ⏱️ Not Started
+**Status**: ❌ Not needed — the fix did NOT change the transport wire (still JSON-only), so `api.js` is untouched. Would only apply if the SSE/progress ROADMAP item is later picked up.
 #### Black Box Interface
 **INPUT**: 020.2 wire format; `apps/web/src/lib/api.js`; `useAnalyze`; `AnalyzingView` (optional real progress).
 **OUTPUT**: `lib/api.js` consumes the new wire but keeps its PUBLIC surface `analyzeMoments(request) → Promise<AnalysisResponse>`; the terminal error event maps to `AnalyzeClientError`; (optional) real progress fed to `AnalyzingView` (replaces the faked rotation). Tests: stream → resolves `AnalysisResponse`; terminal error → throws `AnalyzeClientError`; abort honored; example short-circuit untouched.
