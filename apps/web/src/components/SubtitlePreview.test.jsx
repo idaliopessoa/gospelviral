@@ -96,13 +96,43 @@ describe('SubtitlePreview — video layer', () => {
     expect(container.querySelector('img[src*="img.youtube.com"]')).toBeInTheDocument();
   });
 
-  it('renders the static thumbnail in edit mode even with a videoSource', () => {
-    // Arrange + Act
+  it('renders the uploaded <video> in EDIT mode too — not the YouTube cover (D1)', () => {
+    // Arrange + Act — this rewrites the old test that encoded the bug
     const { container } = renderPreview({ videoSource: VIDEO_SOURCE, cues: CUES, mode: 'edit' });
+
+    // Assert — the uploaded clip is the canvas source while editing
+    expect(screen.getByTestId('video-el')).toBeInTheDocument();
+    expect(container.querySelector('img[src*="img.youtube.com"]')).not.toBeInTheDocument();
+  });
+
+  it('renders the YouTube thumbnail in edit when there is NO videoSource (D1 fallback)', () => {
+    // Arrange + Act
+    const { container } = renderPreview({ mode: 'edit' });
 
     // Assert
     expect(screen.queryByTestId('video-el')).not.toBeInTheDocument();
     expect(container.querySelector('img[src*="img.youtube.com"]')).toBeInTheDocument();
+  });
+
+  it('seeks the edit-mode poster frame to startSec on loadedmetadata (D1)', () => {
+    // Arrange — MOMENT[0] starts at 01:08 = 68s
+    renderPreview({ videoSource: VIDEO_SOURCE, cues: CUES, mode: 'edit' });
+    const video = screen.getByTestId('video-el');
+
+    // Act
+    act(() => fireEvent(video, new Event('loadedmetadata')));
+
+    // Assert — paused poster seeked to the cut start (no autoplay in edit)
+    expect(video.currentTime).toBe(68);
+    expect(window.HTMLMediaElement.prototype.play).not.toHaveBeenCalled();
+  });
+
+  it('shows NO play button in edit even with a videoSource (poster is drag-only) (D1)', () => {
+    // Arrange + Act
+    renderPreview({ videoSource: VIDEO_SOURCE, cues: CUES, mode: 'edit' });
+
+    // Assert
+    expect(screen.queryByTestId('play-button')).not.toBeInTheDocument();
   });
 });
 
@@ -305,6 +335,24 @@ describe('SubtitlePreview — overlay + drag gating', () => {
     const lastCall = onVideoConfigChange.mock.calls.at(-1)[0];
     expect(lastCall.x).toBeGreaterThan(50);
     expect(lastCall.x).toBeLessThan(58);
+  });
+
+  it('still translates a video-layer drag with a <video> child present in edit (D1)', () => {
+    // Arrange — with a videoSource the layer now holds a <video>, not an <img>;
+    // drag lives on the wrapper div so it must still commit canvas-px deltas.
+    const onVideoConfigChange = vi.fn();
+    renderPreview({ videoSource: VIDEO_SOURCE, cues: CUES, mode: 'edit', onVideoConfigChange });
+    const videoLayer = screen.getByTestId('video-layer');
+    expect(within(videoLayer).getByTestId('video-el')).toBeInTheDocument();
+
+    // Act
+    fireEvent.pointerDown(videoLayer, { clientX: 0, clientY: 0, pointerId: 7 });
+    fireEvent.pointerMove(videoLayer, { clientX: 14, clientY: 0, pointerId: 7 });
+    fireEvent.pointerUp(videoLayer, { pointerId: 7 });
+
+    // Assert
+    expect(onVideoConfigChange).toHaveBeenCalled();
+    expect(onVideoConfigChange.mock.calls.at(-1)[0].x).toBeGreaterThan(50);
   });
 
   it('drags the subtitle layer independently in edit mode', () => {

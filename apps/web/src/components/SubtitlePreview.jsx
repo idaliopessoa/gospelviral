@@ -196,7 +196,11 @@ export default function SubtitlePreview({
     onReachEnd: onPlaybackEnd,
   });
 
-  const hasVideo = Boolean(videoSource) && mode === 'player';
+  // D1: an uploaded video is the canvas source in BOTH modes — a paused poster
+  // frame (seeked to startSec) while editing, live playback in player mode. The
+  // YouTube thumbnail is only the no-videoSource fallback. Drag stays gated to
+  // edit (on the wrapper div; the <video> is pointer-events-none).
+  const hasVideo = Boolean(videoSource);
   const editable = mode === 'edit';
 
   // Subtitle text is DERIVED from currentTime — the active cue, or cue[0] when
@@ -235,7 +239,10 @@ export default function SubtitlePreview({
   const syPreview = (config.y || 0) * scaleFactor;
 
   const streamUrl = videoSource ? `/api/upload/video/${videoSource.id}/stream` : null;
-  const showPlayButton = hasVideo && !isActivePlayer;
+  // Play affordance is PLAYER-mode only: edit shows the poster frame for
+  // positioning (drag-only, never playable). hasVideo is now true in edit too,
+  // so the explicit mode gate is what keeps edit free of a play button.
+  const showPlayButton = hasVideo && mode === 'player' && !isActivePlayer;
 
   function handlePlayClick() {
     play(); // synchronous within the click gesture — autoplay-safe
