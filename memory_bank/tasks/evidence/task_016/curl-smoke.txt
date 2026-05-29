@@ -1,0 +1,15 @@
+=== full GET (expect 200) ===
+HTTP/1.1 200 OK
+accept-ranges: bytes
+content-length: 29
+content-type: video/mp4
+=== Range bytes=0-4 (expect 206, body 'hello') ===
+HTTP/1.1 206 Partial Content
+content-length: 5
+content-range: bytes 0-4/29
+  body: [hello]
+=== Range bytes=99999- (expect 416) ===
+HTTP/1.1 416 Range Not Satisfiable
+content-range: bytes */29
+=== invalid id (expect 400) ===
+400
