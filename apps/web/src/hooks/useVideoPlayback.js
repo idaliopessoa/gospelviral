@@ -45,8 +45,19 @@ export function useVideoPlayback({ startSec, endSec, isActivePlayer, onReachEnd 
     if (videoEl.currentTime < startSec || videoEl.currentTime >= endSec) {
       videoEl.currentTime = startSec;
     }
-    videoEl.play();
+    // play() rejects on autoplay-policy denial or when interrupted by an
+    // immediate pause() (switching cards) — both benign; swallow so the
+    // rejection does not surface as an uncaught-in-promise console error.
+    const started = videoEl.play();
+    if (started && typeof started.catch === 'function') started.catch(() => {});
   }, [videoEl, startSec, endSec]);
+
+  // When the <video> unmounts (back to EDIÇÃO, or no source) reset the clock so
+  // the static subtitle shows the representative first cue (cueAt → cue[0]),
+  // rather than freezing on the last-played position.
+  useEffect(() => {
+    if (!videoEl) setCurrentTime(startSec);
+  }, [videoEl, startSec]);
 
   // Reactive pause: a card that is not the active player must not be playing.
   useEffect(() => {

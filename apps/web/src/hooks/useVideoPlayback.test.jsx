@@ -134,6 +134,32 @@ describe('useVideoPlayback', () => {
     expect(onReachEnd).toHaveBeenCalledTimes(1);
   });
 
+  it('resets currentTime to startSec when the <video> unmounts (edit shows cue[0])', () => {
+    // Arrange — advance the clock, then unmount the video (PLAYER → EDIÇÃO)
+    const { rerender } = render(<Harness mounted />);
+    const video = screen.getByTestId('video');
+    video.currentTime = 95;
+    act(() => fireEvent(video, new Event('timeupdate')));
+    expect(screen.getByTestId('ct')).toHaveTextContent('95');
+
+    // Act — video unmounts
+    rerender(<Harness mounted={false} />);
+
+    // Assert — clock resets so the static subtitle falls back to the first cue
+    expect(screen.getByTestId('ct')).toHaveTextContent(String(START));
+  });
+
+  it('swallows a rejected play() promise (no uncaught rejection)', () => {
+    // Arrange — play() rejects (autoplay denial / interrupted by pause)
+    window.HTMLMediaElement.prototype.play = vi.fn().mockRejectedValue(new Error('NotAllowed'));
+    const playRef = { current: null };
+    render(<Harness playRef={playRef} />);
+
+    // Act + Assert — does not throw; the rejection is caught internally
+    expect(() => act(() => playRef.current())).not.toThrow();
+    expect(window.HTMLMediaElement.prototype.play).toHaveBeenCalled();
+  });
+
   it('attaches media listeners when the <video> mounts AFTER the first render (edit→player)', () => {
     // Arrange — first render has no <video> (EDIÇÃO mode: nothing to wire)
     const onReachEnd = vi.fn();
