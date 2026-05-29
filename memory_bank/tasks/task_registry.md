@@ -1,6 +1,6 @@
 # Task Registry
 timestamp: 2026-05-28T00:00:00Z
-version: 1.2
+version: 1.5
 
 ## Overview
 
@@ -144,14 +144,34 @@ Architectural decisions promised by tasks land in `memory_bank/decisions/DEC_XXX
 - **Depends on**: TASK_010, TASK_011
 
 ### TASK_013: Card Tabs — Redes Sociais / Legenda do Vídeo
-- **Status**: Ready
-- **Interface**: INPUT[`bootstrap-features-fases-3-6.md` §Fase 3, current `MomentCard.jsx` right column, `App.jsx` `transcript` state, `timestampToSeconds` from `lib/helpers.js`] → OUTPUT[`apps/web/src/lib/transcript-extract.js` (`extractSegmentText` pure helper) + `apps/web/src/components/CardTabs.jsx` (generic, **stateless / controlled** slot-based tabs) + `MomentCard.jsx` refactor (fixed-top: hook/scripture; tabs: Redes Sociais default + Legenda do Vídeo; score `<details>` stays below tabs) + prop threading `App → ResultsView → MomentCard` for `transcript`, `activeCardTab`, `setActiveCardTab` + integration spec pinning global lift + Vitest suites]
+- **Status**: Complete (merged via PR #1 on 2026-05-28)
+- **Interface**: INPUT[`bootstrap-features-fases-3-6.md` §Fase 3, current `MomentCard.jsx` right column, `App.jsx` `transcript` state, `timestampToSeconds` from `lib/helpers.js`] → OUTPUT[`apps/web/src/lib/transcript-extract.js` (`extractSegmentLines` + `extractSegmentText` helpers) + `apps/web/src/components/CardTabs.jsx` (generic, **stateless / controlled** array-prop tabs) + `MomentCard.jsx` refactor (fixed-top: hook/scripture; tabs: Redes Sociais default + Legenda do Vídeo line-per-cue; score `<details>` stays below tabs) + prop threading `App → ResultsView → MomentCard` for `transcript`, `activeCardTab`, `setActiveCardTab` + integration spec pinning global lift + Vitest suites]
 - **Confidence**: HIGH
-- **Black Box**: Right column of `MomentCard` reorganized into fixed metadata top + two tabs. Helper slices transcript by moment range deterministically (no IA, frontend-only). **Tab state (`activeCardTab`) is GLOBAL, owned by `App.jsx`** — one click flips all 5 cards together; same coherence as the existing global visual prefs.
+- **Black Box**: Right column of `MomentCard` reorganized into fixed metadata top + two tabs. Helper slices transcript by moment range deterministically (no IA, frontend-only). **Tab state (`activeCardTab`) is GLOBAL, owned by `App.jsx`** — one click flips all 5 cards together; same coherence as the existing global visual prefs. Final task file v1.3.
 - **Phase**: 3
 - **Prerequisites**: ✅ P1+P2+P3 included
 - **File**: task_013_card_tabs.md
 - **Depends on**: TASK_010 (transcript already flows end-to-end)
+
+### TASK_014: Video Upload — Backend Storage + Endpoint
+- **Status**: Ready
+- **Interface**: INPUT[`bootstrap-features-fases-3-6.md` §Fase 4, `apps/server` Hono app, env seam, logger, route conventions] → OUTPUT[`packages/shared/src/types.js` (`VideoSource` typedef, bilateral) + `apps/server/src/storage/video-storage.js` (`initVideoStorage`, `saveVideo`, `getVideoSourceById`, `streamVideoById` — atomic-write, idempotent boot cleanup) + `apps/server/src/routes/upload.js` (`POST /api/upload/video`, `GET /api/upload/video/:id/info`) + `config/env.js` extension (`VIDEO_UPLOAD_DIR`, `VIDEO_MAX_SIZE_BYTES`) + `server.js` wiring + root `.gitignore` for `apps/server/.tmp/` + Vitest suites (storage 10-case + route 7-case + env)]
+- **Confidence**: HIGH
+- **Black Box**: Server gains a typed multipart upload endpoint that writes to a gitignored temp dir, returns a `VideoSource` handle, and wipes the dir on every boot.
+- **Phase**: 4
+- **Prerequisites**: ✅ P1+P2+P3 included
+- **File**: task_014_video_upload_backend.md
+- **Depends on**: TASK_005 (server scaffold, env, logger, route conventions)
+
+### TASK_015: Video Upload — Frontend UI + Integration
+- **Status**: Ready
+- **Interface**: INPUT[TASK_014 OUTPUT (endpoint + `VideoSource` typedef), `App.jsx` session state, `ConfigPanel.jsx` 3-tab pattern, `lib/api.js` fetch pattern, `persistence.js` SSOT scope] → OUTPUT[`apps/web/src/lib/upload.js` (`uploadVideo` + typed `UploadError`) + `apps/web/src/components/VideoUploadButton.jsx` (stateless / controlled drag-drop + file picker) + `ConfigPanel.jsx` 4th tab "Vídeo Fonte" + header badge `filename · size` + `App.jsx` `videoSource` session state + `handleReset` clear + `ResultsView.jsx` pass-through + Vitest suites + Chrome DevTools MCP smoke]
+- **Confidence**: MEDIUM (UX placement validated by smoke)
+- **Black Box**: Frontend gains a manual-upload affordance (no YouTube import, anywhere). `videoSource` lives in `App.jsx` session-only (NOT persisted). The 4th ConfigPanel tab "Vídeo Fonte" hosts the dropzone; the header strip shows the active badge. Resets clear it.
+- **Phase**: 4
+- **Prerequisites**: ✅ P1+P2+P3 included
+- **File**: task_015_video_upload_frontend.md
+- **Depends on**: TASK_014 (endpoint + `VideoSource` typedef)
 
 ## Task Creation Log
 2026-05-27 TASK_001..TASK_012 created — Pass 1 high-level plan, awaiting human review before Pass 2 decomposition per task.
@@ -161,12 +181,16 @@ Architectural decisions promised by tasks land in `memory_bank/decisions/DEC_XXX
 2026-05-28 **Sonar scanner switched to `@sonar/scan` (Node CLI; binary `sonar`).** All references to `sonar-scanner` across task files, registry conventions, and CLAUDE.md replaced with `sonar`. TASK_001 OUTPUT enumerates the `sonar-project.properties` contents (`projectKey=idaliopessoa_gospelviral`, `organization=idaliopessoa`, `host.url=https://sonarcloud.io`, sources/tests/lcov for the three workspaces) and the `.env.local` rule (`SONAR_TOKEN` lives there only, gitignored before first `git add`). TASK_001 ships a `pnpm sonar` script wrapping `@sonar/scan`. New DECs registered: `DEC_XXX_sonar_node_scanner.md` (scanner choice) and `DEC_XXX_scaffold_coverage_gate.md` ("Coverage on New Code" Quality Gate FAIL on the scaffold scan is EXPECTED — report to human, never bypass; three remediation paths the human picks from). Risk Assessment expanded with token-leak + install-variant rows. Token bytes recorded only in execution-plan memory (~/.claude/projects/.../execution_plan_pass_2.md, not in git).
 2026-05-28 **Playwright removed from scaffold (TASK_001 DEC).** Browser-driven UI verification routes through the Chrome DevTools MCP that the agent connects to (`navigate`, `take_screenshot`, `list_console_messages`, `list_network_requests`, `evaluate`, `click`, `fill`, `wait_for`). All task P3 sections updated: server-only tasks declare "Browser smoke (Chrome DevTools MCP): skipped"; UI tasks (TASK_004 / TASK_010 / TASK_011 / TASK_012) replace Playwright instructions with explicit MCP sequences (navigate → screenshot → console + network assertions → evaluate for state introspection). TASK_004 risk row and DEC updated to reflect MCP screenshots as parity evidence. TASK_012 ROADMAP item rewritten to position Playwright as the future swap-in if pixel-diff snapshot regression becomes worthwhile. Subagent `.claude/agents/black-box-auditor.md` created — read-only architectural auditor invoked at the end of every Pass 2 task to produce a GAP REPORT before merge. Project memory `~/.claude/projects/.../memory/execution_plan_pass_2.md` pins the autonomous Pass 2 cycle for fresh sessions.
 2026-05-28 **Phase 1+2 migration complete (v1.0.0 released).** Bootstrap `bootstrap-features-fases-3-6.md` introduces Phases 3–6 (card tabs, video ingestion, play + subtitle sync, MP4 export with burned subtitles). Sequencing 3 → 4 → 5 → 6 with human gate between phases.
-2026-05-28 **TASK_013 created (Phase 3 Pass 1).** Sole task for Phase 3: card tabs (Redes Sociais default + Legenda do Vídeo). Decisions captured in task file: (D1) single task, (D2) score `<details>` stays outside tabs, (D3) "limpar" regex deferred to ROADMAP, (D4) helper in `apps/web/src/lib/` (web-only until 2nd consumer), (D5) per-card local tab state (not lifted). Inviolable DEC "app nunca baixa do YouTube" removed from bootstrap per human directive.
+2026-05-28 **TASK_013 created (Phase 3 Pass 1).** Sole task for Phase 3: card tabs (Redes Sociais default + Legenda do Vídeo). Decisions captured in task file: (D1) single task, (D2) score `<details>` stays outside tabs, (D3) "limpar" regex deferred to ROADMAP, (D4) helper in `apps/web/src/lib/` (web-only until 2nd consumer), (D5) per-card local tab state (not lifted).
 2026-05-28 **TASK_013 Pass 1 approved by human, D5 reversed.** Tab state (`activeCardTab`) is now **GLOBAL**, owned by `App.jsx` and threaded down via props — same coherence pattern as `subtitleConfig` / `videoConfig` / `overlayConfig` / `isConfigCollapsed`; one click flips all 5 cards. `CardTabs` becomes stateless / fully controlled. D4 reinforced with explicit promotion clause: if FASE 6 needs the same extractor, file MIGRATES to `packages/shared` (no duplication). Persistence of `activeCardTab` deferred (schema bump v1→v2 in a separate follow-up task). Task file bumped to v1.1.
+2026-05-28 **TASK_013 merged via PR #1 (squash + delete branch).** Final task file v1.3 includes ratification of `extractSegmentLines` (per-cue render, smoke-driven adjustment) and the `CardTabs` `tabs[]` array prop API. SonarCloud Quality Gate PASS, new-code coverage 95.4%, `javascript:S3776 = 0`, black-box auditor "AUDITORIA LIMPA". Three project memories saved: [[sonar_env_sourcing]], [[sonar_quality_gate_gotchas]], [[pnpm_workspace_test_coverage_flake]].
+2026-05-28 **TASK_014 + TASK_015 created (Phase 4 Pass 1).** Two-task split for video upload: TASK_014 = backend (storage module + `POST /api/upload/video` + `GET /info` + cleanup-on-boot + `VideoSource` bilateral primitive in `@gospelviral/shared`); TASK_015 = frontend (`VideoUploadButton` stateless controlled in a new 4th `ConfigPanel` tab "Vídeo Fonte" + `uploadVideo` client + session-only `videoSource` state in `App.jsx`, NOT persisted).
+2026-05-28 **TASK_014 + TASK_015 Pass 1 approved by human, with adjustments.** Both task files bumped to v1.1. Adjustments: (D3) `VideoSource` stays a **reference** to the file; if Phase 6 export needs server-side metadata (codec / fps / resolution / duration for FFmpeg) it lands as a separate module `apps/server/src/runtime/video-metadata.js`, NOT retrofitted into the primitive. Recorded in TASK_014 "Known follow-ups". (D5) the "Vídeo Fonte" tab has a hard two-state visual INVARIANT: EMPTY = generous drop area + prominent CTA "Subir vídeo do trecho" (action-first); FILLED = a single discrete line "filename · size · remover". The component test asserts the EMPTY container is taller and has the CTA, the MCP smoke captures both states. Without the distinction, the tab reads as "one more setting" and the conceptual frame breaks. (D6) size cap default raised 500 MiB → 2 GiB (`MAX_UPLOAD_SIZE_BYTES`, default `2147483648`); error copy updated to "Limite 2 GB". Operational notes from TASK_013 memories are referenced in both P2 + P3 sections of TASK_014 and TASK_015: [[sonar_env_sourcing]], [[pnpm_workspace_test_coverage_flake]], [[sonar_quality_gate_gotchas]].
+2026-05-28 **TASK_014 Pass 2 reviewed by human, streaming pipeline promoted to architectural INVARIANT.** Task file bumped to v1.2. Key change: the "parseBody buffers in RAM" item is no longer a risk to weigh — it is a hard contract. New DECs: (1) streaming-first pipeline `req.body → Readable.fromWeb → busboy wrapper → storage.save({ stream, ... }) → fs.createWriteStream → atomic rename`, memory residency `O(KB)` during a 2 GiB upload; (2) `busboy` chosen as the streaming multipart parser, wrapped in `apps/server/src/lib/multipart-parser.js` per §"Wrap external dependencies" so the route never imports busboy directly; (3) sidecar JSON `<id>.json` next to `<id>.<ext>` holds the typed `VideoSource` (filename, mime, uploadedAt preserved); (4) factory DI `createVideoStorage({ dir, logger })` mirrors `createAnalyzeRouter` / `createDetectRouter`; (5) test size-cap exercises use `maxBytes: 1024` injected via DI (no 2 GiB Blobs); (6) disk path `${dir}/${uuid}.${ext}`, original filename NEVER on disk (only in sidecar) — path traversal non-applicable by design, mime→ext from a whitelist table, uuid from `crypto.randomUUID()`; (7) heap-invariant smoke `smoke:heap` is **in-process** (Node script, imports storage + parser directly, samples `process.memoryUsage().heapUsed` every 100 ms during a 1.5 GiB upload, asserts `delta < 50 MB`) — NOT an HTTP debug endpoint (zero attack surface, measures JS heap not RSS). Smoke FAIL = PR BLOCKED, no bypass. Subtasks expanded 6 → 7 (multipart-parser wrapper becomes its own black box). The earlier "1.5 GiB curl smoke before merge" wording was replaced by the heap-invariant assertion.
 
 ## Task ID Sequence
-Last Used: TASK_013
-Next Available: TASK_014
+Last Used: TASK_015
+Next Available: TASK_016
 
 ## Conventions Snapshot (used by every task)
 

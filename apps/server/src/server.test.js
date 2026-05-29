@@ -23,4 +23,22 @@ describe('scaffold: server', () => {
     // Assert
     expect(shared).toBeDefined();
   });
+
+  it('mounts the upload router (POST without a video field → 400 missing_video_field)', async () => {
+    // Arrange
+    const form = new FormData();
+    form.append('wrongfield', new Blob([Buffer.from('x')], { type: 'video/mp4' }), 'x.mp4');
+    const req = new Request('http://localhost/api/upload/video', {
+      method: 'POST',
+      body: form,
+    });
+
+    // Act
+    const res = await app.fetch(req);
+    const body = await res.json();
+
+    // Assert — the router IS mounted; validation kicks in
+    expect(res.status).toBe(400);
+    expect(body.error.code).toBe('missing_video_field');
+  });
 });

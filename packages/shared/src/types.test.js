@@ -4,6 +4,7 @@ import {
   SUBTITLE_ANCHOR_PERCENT,
   ANALYSIS_RESPONSE_REQUIRED_KEYS,
   TOP_MOMENTS_COUNT,
+  VIDEO_MIME_ALLOWLIST_DEFAULT,
 } from './types.js';
 
 describe('shared constants', () => {
@@ -32,5 +33,15 @@ describe('shared constants', () => {
   it('TOP_MOMENTS_COUNT is 5', () => {
     // Arrange + Act + Assert
     expect(TOP_MOMENTS_COUNT).toBe(5);
+  });
+
+  it('VIDEO_MIME_ALLOWLIST_DEFAULT exposes the Phase 4 mime defaults and is immutable', () => {
+    // Arrange + Act + Assert
+    expect([...VIDEO_MIME_ALLOWLIST_DEFAULT]).toEqual([
+      'video/mp4',
+      'video/quicktime',
+      'video/webm',
+    ]);
+    expect(Object.isFrozen(VIDEO_MIME_ALLOWLIST_DEFAULT)).toBe(true);
   });
 });
