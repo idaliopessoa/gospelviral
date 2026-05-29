@@ -7,6 +7,19 @@
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23F5F1EA'/%3E%3Ctext x='50%25' y='52%25' font-family='Instrument Serif,serif' font-size='42' text-anchor='middle' dominant-baseline='middle' fill='%23B95D3F'%3EM%3C/text%3E%3C/svg%3E" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!--
+      Google Fonts load (D5 — TASK_019). Moved here from a globals.css @import:
+      a CSS @import that follows the @tailwind directives violates the spec, so
+      the production Vite build STRIPPED it (dist CSS had zero `googleapis`) and
+      custom display fonts never loaded in prod. As an external <link> in the
+      HTML entry it survives the build. Load order preserved verbatim:
+      Instrument Serif → IBM Plex Sans → IBM Plex Mono → Inter Tight → Manrope
+      → Bebas Neue → Anton → Archivo Black. display=swap keeps first paint.
+    -->
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Inter+Tight:wght@500;700&family=Manrope:wght@500;700;800&family=Bebas+Neue&family=Anton&family=Archivo+Black&display=swap"
+    />
   </head>
   <body>
     <div id="root"></div>
