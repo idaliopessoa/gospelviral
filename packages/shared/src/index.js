@@ -14,3 +14,8 @@ export { EXAMPLE_URL, EXAMPLE_TRANSCRIPT, EXAMPLE_RESPONSE } from './example-dat
 export { timestampToSeconds } from './time.js';
 export { parseTranscriptLines, normalizeCueText } from './transcript-lines.js';
 export { buildSubtitleCues } from './subtitle-cues.js';
+export {
+  parseColdOpenRange,
+  buildPlaybackSegments,
+  advanceSegment,
+} from './playback-segments.js';

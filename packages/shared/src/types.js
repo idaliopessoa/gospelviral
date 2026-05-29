@@ -81,6 +81,11 @@ export const SUBTITLE_ANCHOR_PERCENT = Object.freeze({ top: 12, center: 50, bott
  * @property {number} viability_score          0..50
  * @property {'apply_cold_open'|'keep_linear'} decision
  * @property {{timestamp: string, why_powerful: string}} peak_moment
+ *   `timestamp` is a RANGE string `"START-END"` (each side `MM:SS` or
+ *   `HH:MM:SS`), e.g. `"01:28:43-01:29:00"` — the prompt mandates this form.
+ *   Parse it via `parseColdOpenRange` (split on `-` FIRST; passing the whole
+ *   string to `timestampToSeconds` returns 0). Drives the D6 cold-open
+ *   playback segment `[peak, fullCut]`.
  */
 
 /**
