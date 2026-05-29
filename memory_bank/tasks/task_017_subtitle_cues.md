@@ -1,7 +1,7 @@
 # TASK_017: SubtitleCue Primitive (shared)
 timestamp: 2026-05-29T00:00:00Z
-version: 1.0
-status: Ready
+version: 1.1
+status: Complete (merged via PR #6 on 2026-05-29)
 owner: unassigned
 confidence: HIGH
 phase: 5
