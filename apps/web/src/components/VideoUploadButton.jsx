@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Film, Upload, X } from 'lucide-react';
 import { VIDEO_MIME_ALLOWLIST_DEFAULT } from '@gospelviral/shared';
 import { uploadVideo } from '../lib/upload.js';
+import { useFileSelect } from '../hooks/useFileSelect.js';
 
 const ACCEPT = [...VIDEO_MIME_ALLOWLIST_DEFAULT].join(',');
 const GIB = 1024 * 1024 * 1024;
@@ -85,14 +86,19 @@ function FilledLine({ videoSource, onChange }) {
   );
 }
 
-function EmptyZone({ accept, error, inputRef, onPick, onDrop }) {
+function EmptyZone({ accept, error, onFile }) {
+  // Click + drag share the useFileSelect primitive (same as OverlayControls):
+  // click reliably opens the OS picker, drop applies the file (no navigation).
+  const { isDragging, inputProps, zoneProps } = useFileSelect({ accept, onFile });
   return (
     <div>
-      <label
+      <button
+        type="button"
         data-upload-state="empty"
-        onDragOver={(e) => e.preventDefault()}
-        onDrop={onDrop}
-        className="cursor-pointer border-2 border-dashed border-stone-300 hover:border-stone-900 hover:bg-stone-50 rounded-sm min-h-[160px] flex flex-col items-center justify-center gap-2 px-4 text-center transition-colors"
+        {...zoneProps}
+        className={`w-full select-none border-2 border-dashed rounded-sm min-h-[160px] flex flex-col items-center justify-center gap-2 px-4 text-center transition-colors hover:border-stone-900 hover:bg-stone-50 ${
+          isDragging ? 'border-stone-900 bg-stone-50' : 'border-stone-300'
+        }`}
       >
         <Upload size={28} className="text-stone-400" />
         <span
@@ -105,16 +111,10 @@ function EmptyZone({ accept, error, inputRef, onPick, onDrop }) {
           className="text-xs text-stone-400"
           style={{ fontFamily: "'IBM Plex Sans', sans-serif" }}
         >
-          ou arraste MP4 / MOV / WebM aqui · até 2 GB
+          {isDragging ? 'Solte o vídeo aqui' : 'ou arraste MP4 / MOV / WebM aqui · até 2 GB'}
         </span>
-        <input
-          ref={inputRef}
-          type="file"
-          accept={accept}
-          onChange={onPick}
-          className="hidden"
-        />
-      </label>
+      </button>
+      <input {...inputProps} className="hidden" />
       {error && (
         <p
           className="mt-2 text-xs text-red-700"
@@ -141,7 +141,6 @@ export default function VideoUploadButton({ videoSource, onChange, uploadImpl = 
   const [progress, setProgress] = useState(null); // null = idle | 0..1 = pending
   const [error, setError] = useState(null);
   const [stuck, setStuck] = useState(false);
-  const inputRef = useRef(null);
   const pending = progress !== null;
 
   // Stuck-progress fallback: if no progress advances past 0 within a few
@@ -170,28 +169,11 @@ export default function VideoUploadButton({ videoSource, onChange, uploadImpl = 
     }
   }
 
-  function handlePick(e) {
-    handleFile(e.target.files?.[0]);
-  }
-
-  function handleDrop(e) {
-    e.preventDefault();
-    handleFile(e.dataTransfer?.files?.[0]);
-  }
-
   if (videoSource) {
     return <FilledLine videoSource={videoSource} onChange={onChange} />;
   }
   if (pending) {
     return <PendingSurface progress={progress} stuck={stuck} />;
   }
-  return (
-    <EmptyZone
-      accept={ACCEPT}
-      error={error}
-      inputRef={inputRef}
-      onPick={handlePick}
-      onDrop={handleDrop}
-    />
-  );
+  return <EmptyZone accept={ACCEPT} error={error} onFile={handleFile} />;
 }
