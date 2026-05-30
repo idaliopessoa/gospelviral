@@ -229,6 +229,17 @@ Architectural decisions promised by tasks land in `memory_bank/decisions/DEC_XXX
 - **Depends on**: TASK_009/010 (analyze transport)
 - **smoke:heap**: N/A (no hot-path file — confirm)
 
+### TASK_021: Standardize file upload (click + drag) across overlay + video
+- **Status**: Planning
+- **Interface**: INPUT[`OverlayControls.jsx` (broken click + no drag), `VideoUploadButton.jsx` (click+drag standard), upload tests] → OUTPUT[shared `useFileSelect` hook (`{isDragging, open, inputProps, zoneProps}`) — explicit `ref.click()` picker + drag preventDefault; overlay fixed (click opens picker, drag applies, select-none, inline MIME error); video standardized on the same hook]
+- **Confidence**: HIGH (root cause reproduced in-browser; small shared primitive)
+- **Black Box**: Both overlay + video accept a click (reliably opens the OS picker — not the fragile `<label>`+`display:none`) AND drag-n-drop (applies the file, no browser navigation), via one `useFileSelect` SSOT. Fixes the overlay upload that selected text on click and opened the image in a new tab on drop.
+- **Phase**: 5 (UX follow-up)
+- **Prerequisites**: ✅ P1+P2+P3 included
+- **File**: task_021_standardize_file_upload.md
+- **Depends on**: TASK_019 (overlay/video preview)
+- **smoke:heap**: N/A (web-only — no upload-route/video-storage/multipart file)
+
 ## Task Creation Log
 2026-05-27 TASK_001..TASK_012 created — Pass 1 high-level plan, awaiting human review before Pass 2 decomposition per task.
 2026-05-27 Registry refined: DEC folder convention recorded; TASK_007 dependency widened to include TASK_006; TASK_001 GitFlow special-cased for `main`→`develop` bootstrap; TASK_004 visual-parity gate clarified as human-only (Playwright snapshot deferred); TASK_011 schema-versioning + migration-safety invariants tightened; "viral-cristao-artifact.jsx byte-identical until TASK_012" invariant propagated to all tasks that read it.
