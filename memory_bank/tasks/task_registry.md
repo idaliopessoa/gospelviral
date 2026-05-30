@@ -25,7 +25,7 @@ Architectural decisions promised by tasks land in `memory_bank/decisions/DEC_XXX
 ## Active Tasks
 
 ### TASK_001: Monorepo Scaffold
-- **Status**: Ready
+- **Status**: Complete (merged to develop)
 - **Interface**: INPUT[bootstrap.md stack, root files] → OUTPUT[pnpm workspaces declaring `apps/*`+`packages/*`, apps/web Vite skeleton, apps/server Hono stub, `packages/shared` empty package (`@gospelviral/shared`, `workspace:*` wired into both apps), shared tooling (ESLint flat with cross-package import rules, Vitest, sonar config) — NO Playwright (browser smoke goes through Chrome DevTools MCP at audit time)]
 - **Confidence**: HIGH
 - **Black Box**: Repository becomes a workable JS monorepo with three workspaces (two apps + one shared package shell) without yet moving any source from the `.jsx`.
@@ -34,7 +34,7 @@ Architectural decisions promised by tasks land in `memory_bank/decisions/DEC_XXX
 - **File**: task_001_monorepo_scaffold.md
 
 ### TASK_002: Library Extraction (shared package + web UI lib)
-- **Status**: Ready
+- **Status**: Complete (merged to develop)
 - **Interface**: INPUT[`viral-cristao-artifact.jsx` lines ~7-525, TASK_001 empty `@gospelviral/shared`] → OUTPUT[populated `packages/shared/src/{types,prompts,parse-analysis-response,example-data,index}.js` (bilateral, consumed by web + server) + `apps/web/src/lib/{helpers,text-highlight,scripture-books}.js` (UI-only) + Vitest suites]
 - **Confidence**: HIGH
 - **Black Box**: Cross-cutting primitives + LLM I/O contract land in `@gospelviral/shared`; UI-only helpers stay in `apps/web/src/lib`. The artifact's `parseJsonFromResponse` is NOT carried into web — it becomes vestigial after TASK_010 since the backend returns clean JSON.
@@ -44,7 +44,7 @@ Architectural decisions promised by tasks land in `memory_bank/decisions/DEC_XXX
 - **Depends on**: TASK_001
 
 ### TASK_003: Components Extraction (1:1)
-- **Status**: Ready
+- **Status**: Complete (merged to develop)
 - **Interface**: INPUT[`.jsx` lines ~528-1260, black-box table in arch doc §"Project-Specific Black Box Boundaries"] → OUTPUT[`apps/web/src/components/*.jsx` + `@testing-library/react` tests for behavioral contracts]
 - **Confidence**: HIGH
 - **Black Box**: Each component lives in its own file, props-as-interface preserved verbatim, no inter-component coupling beyond the documented contracts.
@@ -54,7 +54,7 @@ Architectural decisions promised by tasks land in `memory_bank/decisions/DEC_XXX
 - **Depends on**: TASK_002
 
 ### TASK_004: App Composition + Visual Parity
-- **Status**: Ready
+- **Status**: Complete (merged to develop)
 - **Interface**: INPUT[TASK_002 lib, TASK_003 components, `.jsx` App + inline style block] → OUTPUT[`apps/web/src/{App,main}.jsx`, `styles/globals.css`, Tailwind config, parity validation evidence]
 - **Confidence**: MEDIUM
 - **Black Box**: Composed app boots, three-view state machine works (`input → analyzing → results`), pixel/behavior parity vs `.jsx` confirmed via side-by-side human review + Chrome DevTools MCP screenshots/console/network evidence (snapshot regression deferred to ROADMAP).
@@ -64,7 +64,7 @@ Architectural decisions promised by tasks land in `memory_bank/decisions/DEC_XXX
 - **Depends on**: TASK_003
 
 ### TASK_005: Server Scaffold + Models Config
-- **Status**: Ready
+- **Status**: Complete (merged to develop)
 - **Interface**: INPUT[bootstrap dual-mode spec, Anthropic model slugs] → OUTPUT[`apps/server/` Hono app skeleton, `src/config/models.js` (`resolveModel(preference)`), `.env.example`]
 - **Confidence**: HIGH
 - **Black Box**: A Hono server that boots, exposes `/healthz`, and centralizes model-slug resolution behind a stable function. No real routes yet.
@@ -74,7 +74,7 @@ Architectural decisions promised by tasks land in `memory_bank/decisions/DEC_XXX
 - **Depends on**: TASK_001
 
 ### TASK_006: Claude API Adapter
-- **Status**: Ready
+- **Status**: Complete (merged to develop)
 - **Interface**: INPUT[`(systemPrompt, userMessage, modelId)`, `ANTHROPIC_API_KEY` env, `parseAnalysisResponse` from `@gospelviral/shared`] → OUTPUT[`apps/server/src/runtime/claude-api.js` + `runtime/errors.js`, returns `Promise<AnalysisResponse>`]
 - **Confidence**: HIGH
 - **Black Box**: Anthropic REST adapter. Wraps `fetch` to `api.anthropic.com`, **delegates parsing to `parseAnalysisResponse` from `@gospelviral/shared` (no server-side parser duplicate)**, returns the canonical `AnalysisResponse`.
@@ -84,7 +84,7 @@ Architectural decisions promised by tasks land in `memory_bank/decisions/DEC_XXX
 - **Depends on**: TASK_002 (parser in shared), TASK_005 (env, logger, resolveModel)
 
 ### TASK_007: Claude CLI Adapter + Stream-JSON Parser
-- **Status**: Ready
+- **Status**: Complete (merged to develop)
 - **Interface**: INPUT[`(systemPrompt, userMessage, modelId)`, `claude` binary on PATH] → OUTPUT[`apps/server/src/runtime/claude-cli.js`, `parsers/stream-json.js`, returns `Promise<AnalysisResponse>`]
 - **Confidence**: MEDIUM
 - **Black Box**: Spawns the `claude` CLI with prompt-via-stdin and `--output-format stream-json`, consumes line-delimited events, extracts the final `result` payload, parses into `AnalysisResponse`. Reference: `nexu-io/open-design` `agents.ts` + `claude-stream.ts`.
@@ -94,7 +94,7 @@ Architectural decisions promised by tasks land in `memory_bank/decisions/DEC_XXX
 - **Depends on**: TASK_002 (parser in `@gospelviral/shared`), TASK_005 (env, logger, resolveModel), TASK_006 (adapter contract + typed error classes that CLI mirrors). API adapter goes first to validate the response contract before CLI layers process management on top.
 
 ### TASK_008: Runtime Detection
-- **Status**: Ready
+- **Status**: Complete (merged to develop)
 - **Interface**: INPUT[OS PATH] → OUTPUT[`apps/server/src/runtime/detect.js` exporting `detectRuntime(): { cli, apiKey, recommended }`]
 - **Confidence**: HIGH
 - **Black Box**: Cross-platform check for `claude` (and `openclaude` fallback) in PATH + presence of `ANTHROPIC_API_KEY`. Memoized.
@@ -104,7 +104,7 @@ Architectural decisions promised by tasks land in `memory_bank/decisions/DEC_XXX
 - **Depends on**: TASK_005
 
 ### TASK_009: Analyze + Detect Endpoints
-- **Status**: Ready
+- **Status**: Complete (merged to develop)
 - **Interface**: INPUT[TASK_006 API adapter, TASK_007 CLI adapter, TASK_008 detect] → OUTPUT[`POST /api/analyze` (JSON; SSE deferred to roadmap), `GET /api/runtime/detect`]
 - **Confidence**: MEDIUM
 - **Black Box**: HTTP surface that routes by mode (`cli` preferred when present, `api` fallback or explicit), validates input, returns canonical `AnalysisResponse` regardless of which adapter ran.
@@ -114,7 +114,7 @@ Architectural decisions promised by tasks land in `memory_bank/decisions/DEC_XXX
 - **Depends on**: TASK_006, TASK_007, TASK_008
 
 ### TASK_010: Frontend↔Backend Wire-Up + Mode Badge
-- **Status**: Ready
+- **Status**: Complete (merged to develop)
 - **Interface**: INPUT[`apps/web` app, server endpoints from TASK_009] → OUTPUT[`apps/web/src/lib/api.js` calls `/api/analyze`, Vite proxy config, `ConfigPanel` or header badge showing active mode + manual toggle]
 - **Confidence**: MEDIUM
 - **Black Box**: Replaces the direct-to-Anthropic `fetch` with a backend call. UI shows "via Claude Code CLI" or "via API key" badge; user can force-API in settings.
@@ -124,7 +124,7 @@ Architectural decisions promised by tasks land in `memory_bank/decisions/DEC_XXX
 - **Depends on**: TASK_004, TASK_009
 
 ### TASK_011: localStorage Persistence (visual configs only)
-- **Status**: Ready
+- **Status**: Complete (merged to develop)
 - **Interface**: INPUT[`subtitleConfig`, `videoConfig`, `overlayConfig`, `isConfigCollapsed`] → OUTPUT[`apps/web/src/lib/persistence.js`, App rehydrates on mount, writes on change (debounced)]
 - **Confidence**: HIGH
 - **Black Box**: One module owns the localStorage SSOT for visual presets. Analysis `results`, `url`, `transcript` deliberately session-only.
@@ -134,7 +134,7 @@ Architectural decisions promised by tasks land in `memory_bank/decisions/DEC_XXX
 - **Depends on**: TASK_004
 
 ### TASK_012: Docs Rewrite — CLAUDE.md (monorepo) + ROADMAP.md
-- **Status**: Ready
+- **Status**: Complete (merged to develop)
 - **Interface**: INPUT[finalized monorepo state] → OUTPUT[rewritten `CLAUDE.md` reflecting `apps/web`+`apps/server`+dual-mode, new `ROADMAP.md` (Apify, multi-vídeo, ZIP export, SSE streaming progress)]
 - **Confidence**: HIGH
 - **Black Box**: Documentation aligned with the post-migration repo. The artifact-era `CLAUDE.md` is archived or fully replaced.
@@ -174,7 +174,7 @@ Architectural decisions promised by tasks land in `memory_bank/decisions/DEC_XXX
 - **Depends on**: TASK_014 (endpoint + `VideoSource` typedef)
 
 ### TASK_016: Video Stream Route (HTTP Range)
-- **Status**: Ready
+- **Status**: Complete (merged to develop)
 - **Interface**: INPUT[`bootstrap §Fase 5`, TASK_014 storage (`stream`/`get`) + upload router + `isValidVideoId`] → OUTPUT[`storage.streamRange(id, range?)` (createReadStream, O(KB)) + `lib/range.js` (pure char-scan Range parser) + `GET /api/upload/video/:id/stream` (200 full / 206 partial / 416 / 404 / 400) + storage + route + range Vitest suites]
 - **Confidence**: HIGH
 - **Black Box**: Server serves the uploaded video to a `<video>` element with HTTP Range support (206 Partial Content), streaming via `createReadStream` — never buffering the file. Size/mime from the sidecar `VideoSource`.
