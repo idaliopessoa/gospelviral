@@ -230,7 +230,7 @@ Architectural decisions promised by tasks land in `memory_bank/decisions/DEC_XXX
 - **smoke:heap**: N/A (no hot-path file — confirm)
 
 ### TASK_021: Standardize file upload (click + drag) across overlay + video
-- **Status**: Planning
+- **Status**: Complete (merged via PR #10 on 2026-05-30)
 - **Interface**: INPUT[`OverlayControls.jsx` (broken click + no drag), `VideoUploadButton.jsx` (click+drag standard), upload tests] → OUTPUT[shared `useFileSelect` hook (`{isDragging, open, inputProps, zoneProps}`) — explicit `ref.click()` picker + drag preventDefault; overlay fixed (click opens picker, drag applies, select-none, inline MIME error); video standardized on the same hook]
 - **Confidence**: HIGH (root cause reproduced in-browser; small shared primitive)
 - **Black Box**: Both overlay + video accept a click (reliably opens the OS picker — not the fragile `<label>`+`display:none`) AND drag-n-drop (applies the file, no browser navigation), via one `useFileSelect` SSOT. Fixes the overlay upload that selected text on click and opened the image in a new tab on drop.

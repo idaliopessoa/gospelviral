@@ -1,7 +1,7 @@
 # TASK_021: Standardize file upload (click + drag-n-drop) across overlay + video
 timestamp: 2026-05-30T00:00:00Z
 version: 1.0
-status: Planning
+status: Complete (merged via PR #10 on 2026-05-30)
 owner: unassigned
 confidence: HIGH (root cause reproduced; fix is a small shared primitive)
 
