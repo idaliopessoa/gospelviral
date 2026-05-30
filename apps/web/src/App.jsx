@@ -71,9 +71,19 @@ export default function App() {
   const [videoConfig, setVideoConfig] = useState(initialPresets.videoConfig);
   const [overlayConfig, setOverlayConfig] = useState(initialPresets.overlayConfig);
   const [activeTab, setActiveTab] = useState('subtitle');
+  const [activeCardTab, setActiveCardTab] = useState('redes-sociais');
+  // Session-only handle to the uploaded source video. Deliberately NOT
+  // persisted (it is a server-side reference invalidated on server reboot —
+  // see persistence.js + TASK_015).
+  const [videoSource, setVideoSource] = useState(null);
   const [isConfigCollapsed, setIsConfigCollapsed] = useState(
     initialPresets.isConfigCollapsed,
   );
+  // Which card is actively playing (null = none). SSOT for one-plays-at-a-time;
+  // threaded down like activeCardTab. `mode` is DERIVED from the collapse state
+  // (collapsed → player, open → edit) — no separate mode state.
+  const [playingIndex, setPlayingIndex] = useState(null);
+  const mode = isConfigCollapsed ? 'player' : 'edit';
 
   useVisualPresetsPersistence({
     subtitleConfig,
@@ -103,7 +113,16 @@ export default function App() {
 
   function handleReset() {
     setExampleVideoId(null);
+    setVideoSource(null);
+    setPlayingIndex(null);
     reset();
+  }
+
+  // Entering EDIÇÃO (panel open) pauses everything. Single chokepoint: every
+  // collapse change (tab click + toggle button) routes through here.
+  function handleCollapseChange(next) {
+    setIsConfigCollapsed(next);
+    if (next === false) setPlayingIndex(null);
   }
 
   function handleAnalyze() {
@@ -143,16 +162,24 @@ export default function App() {
         <ResultsView
           results={results}
           videoId={videoId}
+          transcript={transcript}
           subtitleConfig={subtitleConfig}
           setSubtitleConfig={setSubtitleConfig}
           videoConfig={videoConfig}
           setVideoConfig={setVideoConfig}
           overlayConfig={overlayConfig}
           setOverlayConfig={setOverlayConfig}
+          videoSource={videoSource}
+          setVideoSource={setVideoSource}
           activeTab={activeTab}
           setActiveTab={setActiveTab}
+          activeCardTab={activeCardTab}
+          setActiveCardTab={setActiveCardTab}
           isCollapsed={isConfigCollapsed}
-          setIsCollapsed={setIsConfigCollapsed}
+          setIsCollapsed={handleCollapseChange}
+          mode={mode}
+          playingIndex={playingIndex}
+          setPlayingIndex={setPlayingIndex}
         />
       )}
 

@@ -3,13 +3,12 @@
 @tailwind utilities;
 
 /*
- * Google Fonts @import — preserved verbatim from the artifact so the load
- * order (Instrument Serif → IBM Plex Sans → IBM Plex Mono → Inter Tight →
- * Manrope → Bebas Neue → Anton → Archivo Black) matches by character.
- * Per DEC: blocking first paint is an acceptable Pass-1 cost; promoting to
- * <link rel="preload"> is a ROADMAP item.
+ * Google Fonts are loaded via a <link rel="stylesheet"> in index.html (D5 —
+ * TASK_019), NOT a CSS @import here. A CSS @import that follows the @tailwind
+ * directives is spec-invalid and the production Vite build strips it, so the
+ * custom display fonts never loaded in prod. The HTML <link> survives the
+ * build; the font load order lives there now.
  */
-@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Inter+Tight:wght@500;700&family=Manrope:wght@500;700;800&family=Bebas+Neue&family=Anton&family=Archivo+Black&display=swap');
 
 :root {
   font-family: 'IBM Plex Sans', sans-serif;

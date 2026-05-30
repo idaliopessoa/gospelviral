@@ -1,13 +1,30 @@
-import { ChevronDown, ChevronUp, Image as ImageIcon, Move, Type } from 'lucide-react';
+import { ChevronDown, ChevronUp, Film, Image as ImageIcon, Move, Type } from 'lucide-react';
 import SubtitleControls from './SubtitleControls.jsx';
 import VideoControls from './VideoControls.jsx';
 import OverlayControls from './OverlayControls.jsx';
+import VideoUploadButton from './VideoUploadButton.jsx';
 
 const TABS = [
   { id: 'subtitle', label: 'Legenda', icon: Type },
   { id: 'video', label: 'Vídeo', icon: Move },
   { id: 'overlay', label: 'Overlay', icon: ImageIcon },
+  { id: 'video-source', label: 'Vídeo Fonte', icon: Film },
 ];
+
+function VideoSourceBadge({ videoSource }) {
+  if (!videoSource) return null;
+  return (
+    <span
+      data-testid="video-source-badge"
+      className="inline-flex items-center gap-1 max-w-[160px] text-[10px] text-stone-600 px-2 py-0.5 bg-stone-100 border border-stone-300 rounded-sm"
+      style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+      title={videoSource.filename}
+    >
+      <Film size={10} className="shrink-0 text-stone-400" />
+      <span className="truncate">{videoSource.filename}</span>
+    </span>
+  );
+}
 
 function TabButton({ tab, active, isCollapsed, onClick }) {
   const Icon = tab.icon;
@@ -34,6 +51,8 @@ export default function ConfigPanel({
   setVideoConfig,
   overlayConfig,
   setOverlayConfig,
+  videoSource,
+  setVideoSource,
   activeTab,
   setActiveTab,
   isCollapsed,
@@ -56,6 +75,7 @@ export default function ConfigPanel({
             />
           ))}
           <div className="ml-auto flex items-center gap-3 pb-2">
+            <VideoSourceBadge videoSource={videoSource} />
             <div
               className="text-[10px] uppercase tracking-[0.2em] text-stone-400 hidden lg:block"
               style={{ fontFamily: "'IBM Plex Sans', sans-serif" }}
@@ -83,6 +103,9 @@ export default function ConfigPanel({
             )}
             {activeTab === 'overlay' && (
               <OverlayControls config={overlayConfig} setConfig={setOverlayConfig} />
+            )}
+            {activeTab === 'video-source' && (
+              <VideoUploadButton videoSource={videoSource} onChange={setVideoSource} />
             )}
           </div>
         )}

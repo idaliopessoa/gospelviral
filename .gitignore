@@ -44,3 +44,9 @@ Thumbs.db
 *.pid
 *.pid.lock
 *.seed
+
+# Video upload temp dir (Phase 4). The `**/.tmp/` glob also covers a misrouted
+# nested path (e.g. apps/server/apps/server/.tmp/) created when a smoke run
+# executes from the wrong cwd, so a stray upload can never be `git add`-ed.
+apps/server/.tmp/
+**/.tmp/

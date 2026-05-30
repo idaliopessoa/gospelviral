@@ -1,0 +1,5 @@
+[INFO]  ScannerEngine: Quality profile for css: Sonar way
+[INFO]  ScannerEngine: Quality profile for js: Sonar way
+[INFO]  ScannerEngine: Miss the cache for 101 out of 101: ANALYSIS_MODE_INELIGIBLE [101/101]
+[INFO]  ScannerEngine: ANALYSIS SUCCESSFUL, you can find the results at: https://sonarcloud.io/dashboard?id=idaliopessoa_gospelviral
+[INFO]  ScannerEngine: More about the report processing at https://sonarcloud.io/api/ce/task?id=AZ5wRamyMPCX6MY1-ZgB

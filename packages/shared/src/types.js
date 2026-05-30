@@ -29,7 +29,7 @@ export const SUBTITLE_ANCHOR_PERCENT = Object.freeze({ top: 12, center: 50, bott
  * @property {number} charsPerScreen
  * @property {number} lines
  * @property {'top'|'center'|'bottom'} position
- * @property {number} size
+ * @property {'S'|'M'|'L'} size
  * @property {boolean} highlightScripture
  * @property {boolean} highlightKeywords
  * @property {number} x  offset in 1080-px canvas reference
@@ -81,6 +81,11 @@ export const SUBTITLE_ANCHOR_PERCENT = Object.freeze({ top: 12, center: 50, bott
  * @property {number} viability_score          0..50
  * @property {'apply_cold_open'|'keep_linear'} decision
  * @property {{timestamp: string, why_powerful: string}} peak_moment
+ *   `timestamp` is a RANGE string `"START-END"` (each side `MM:SS` or
+ *   `HH:MM:SS`), e.g. `"01:28:43-01:29:00"` — the prompt mandates this form.
+ *   Parse it via `parseColdOpenRange` (split on `-` FIRST; passing the whole
+ *   string to `timestampToSeconds` returns 0). Drives the D6 cold-open
+ *   playback segment `[peak, fullCut]`.
  */
 
 /**
@@ -170,3 +175,39 @@ export const ANALYSIS_RESPONSE_REQUIRED_KEYS = Object.freeze([
 ]);
 
 export const TOP_MOMENTS_COUNT = 5;
+
+/**
+ * Reference to a video file ingested via upload. Pure handle — server owns the
+ * disk path under the configured upload dir; consumers see only the typed
+ * envelope. Codec / fps / resolution / duration are NOT part of this shape
+ * (the file is a reference, not a description) — Phase 6 export will read
+ * them from a separate module if needed.
+ *
+ * @typedef {Object} VideoSource
+ * @property {string} id           uuid v4 generated server-side
+ * @property {string} filename     sanitized original filename (display only; NEVER on disk)
+ * @property {number} sizeBytes
+ * @property {string} mimeType     one of VIDEO_MIME_ALLOWLIST_DEFAULT (or whatever the server allows)
+ * @property {string} uploadedAt   ISO 8601 timestamp
+ */
+
+/**
+ * A single subtitle cue on the FULL VIDEO FILE timeline. The bilateral
+ * primitive for subtitle timing — shared by the Phase 5 live player (compares
+ * `<video>.currentTime` against `start`/`end`) and the Phase 6 burned-in
+ * export ("o que se vê é o que se queima"). Built by `buildSubtitleCues`.
+ *
+ * @typedef {Object} SubtitleCue
+ * @property {string} text   normalized cue text (timecodes stripped)
+ * @property {number} start  seconds, ABSOLUTE on the uploaded file timeline (a 47:30 line → 2850); NEVER relative to the cut
+ * @property {number} end    seconds, ABSOLUTE; == the next visible cue's start, last == segment endSec
+ */
+
+/**
+ * Phase 4 default mime allowlist for video uploads. `mp4` covers H.264/H.265
+ * containers from most editors; `quicktime` covers `.mov` (iPhone, Premiere);
+ * `webm` is included at zero extra cost (VP8/VP9/AV1).
+ */
+export const VIDEO_MIME_ALLOWLIST_DEFAULT = Object.freeze(
+  new Set(['video/mp4', 'video/quicktime', 'video/webm']),
+);

@@ -32,6 +32,12 @@ function stripDataURL(overlayConfig) {
   return { ...overlayConfig, dataURL: null, filename: null };
 }
 
+// Persistence scope note (TASK_015): the uploaded `videoSource` is NOT
+// persisted here. It is a server-side handle invalidated on server reboot
+// (cleanup-on-boot), so persisting it would resurrect a dead reference.
+// This module remains the SSOT for VISUAL presets only — videoSource is
+// session-only, owned by App.jsx state.
+
 let warned = false;
 function warnOnce(scope, err) {
   if (warned) return;

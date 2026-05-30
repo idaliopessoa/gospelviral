@@ -59,16 +59,24 @@ function ResultsHeader({ results }) {
 export default function ResultsView({
   results,
   videoId,
+  transcript,
   subtitleConfig,
   setSubtitleConfig,
   videoConfig,
   setVideoConfig,
   overlayConfig,
   setOverlayConfig,
+  videoSource,
+  setVideoSource,
   activeTab,
   setActiveTab,
+  activeCardTab,
+  setActiveCardTab,
   isCollapsed,
   setIsCollapsed,
+  mode,
+  playingIndex,
+  setPlayingIndex,
 }) {
   return (
     <>
@@ -79,6 +87,8 @@ export default function ResultsView({
         setVideoConfig={setVideoConfig}
         overlayConfig={overlayConfig}
         setOverlayConfig={setOverlayConfig}
+        videoSource={videoSource}
+        setVideoSource={setVideoSource}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         isCollapsed={isCollapsed}
@@ -91,11 +101,19 @@ export default function ResultsView({
             key={`${moment.rank ?? i}-${moment.hook_title}`}
             moment={moment}
             videoId={videoId}
+            transcript={transcript}
             subtitleConfig={subtitleConfig}
             videoConfig={videoConfig}
             overlayConfig={overlayConfig}
             onVideoConfigChange={setVideoConfig}
             onSubtitleConfigChange={setSubtitleConfig}
+            activeCardTab={activeCardTab}
+            onActiveCardTabChange={setActiveCardTab}
+            videoSource={videoSource}
+            mode={mode}
+            isActivePlayer={playingIndex === i}
+            onRequestPlay={() => setPlayingIndex(i)}
+            onPlaybackEnd={() => setPlayingIndex(null)}
             index={i}
           />
         ))}

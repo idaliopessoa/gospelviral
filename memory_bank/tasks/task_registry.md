@@ -1,6 +1,6 @@
 # Task Registry
-timestamp: 2026-05-27T00:00:00Z
-version: 1.0
+timestamp: 2026-05-29T00:00:00Z
+version: 1.7
 
 ## Overview
 
@@ -25,7 +25,7 @@ Architectural decisions promised by tasks land in `memory_bank/decisions/DEC_XXX
 ## Active Tasks
 
 ### TASK_001: Monorepo Scaffold
-- **Status**: Ready
+- **Status**: Complete (merged to develop)
 - **Interface**: INPUT[bootstrap.md stack, root files] → OUTPUT[pnpm workspaces declaring `apps/*`+`packages/*`, apps/web Vite skeleton, apps/server Hono stub, `packages/shared` empty package (`@gospelviral/shared`, `workspace:*` wired into both apps), shared tooling (ESLint flat with cross-package import rules, Vitest, sonar config) — NO Playwright (browser smoke goes through Chrome DevTools MCP at audit time)]
 - **Confidence**: HIGH
 - **Black Box**: Repository becomes a workable JS monorepo with three workspaces (two apps + one shared package shell) without yet moving any source from the `.jsx`.
@@ -34,7 +34,7 @@ Architectural decisions promised by tasks land in `memory_bank/decisions/DEC_XXX
 - **File**: task_001_monorepo_scaffold.md
 
 ### TASK_002: Library Extraction (shared package + web UI lib)
-- **Status**: Ready
+- **Status**: Complete (merged to develop)
 - **Interface**: INPUT[`viral-cristao-artifact.jsx` lines ~7-525, TASK_001 empty `@gospelviral/shared`] → OUTPUT[populated `packages/shared/src/{types,prompts,parse-analysis-response,example-data,index}.js` (bilateral, consumed by web + server) + `apps/web/src/lib/{helpers,text-highlight,scripture-books}.js` (UI-only) + Vitest suites]
 - **Confidence**: HIGH
 - **Black Box**: Cross-cutting primitives + LLM I/O contract land in `@gospelviral/shared`; UI-only helpers stay in `apps/web/src/lib`. The artifact's `parseJsonFromResponse` is NOT carried into web — it becomes vestigial after TASK_010 since the backend returns clean JSON.
@@ -44,7 +44,7 @@ Architectural decisions promised by tasks land in `memory_bank/decisions/DEC_XXX
 - **Depends on**: TASK_001
 
 ### TASK_003: Components Extraction (1:1)
-- **Status**: Ready
+- **Status**: Complete (merged to develop)
 - **Interface**: INPUT[`.jsx` lines ~528-1260, black-box table in arch doc §"Project-Specific Black Box Boundaries"] → OUTPUT[`apps/web/src/components/*.jsx` + `@testing-library/react` tests for behavioral contracts]
 - **Confidence**: HIGH
 - **Black Box**: Each component lives in its own file, props-as-interface preserved verbatim, no inter-component coupling beyond the documented contracts.
@@ -54,7 +54,7 @@ Architectural decisions promised by tasks land in `memory_bank/decisions/DEC_XXX
 - **Depends on**: TASK_002
 
 ### TASK_004: App Composition + Visual Parity
-- **Status**: Ready
+- **Status**: Complete (merged to develop)
 - **Interface**: INPUT[TASK_002 lib, TASK_003 components, `.jsx` App + inline style block] → OUTPUT[`apps/web/src/{App,main}.jsx`, `styles/globals.css`, Tailwind config, parity validation evidence]
 - **Confidence**: MEDIUM
 - **Black Box**: Composed app boots, three-view state machine works (`input → analyzing → results`), pixel/behavior parity vs `.jsx` confirmed via side-by-side human review + Chrome DevTools MCP screenshots/console/network evidence (snapshot regression deferred to ROADMAP).
@@ -64,7 +64,7 @@ Architectural decisions promised by tasks land in `memory_bank/decisions/DEC_XXX
 - **Depends on**: TASK_003
 
 ### TASK_005: Server Scaffold + Models Config
-- **Status**: Ready
+- **Status**: Complete (merged to develop)
 - **Interface**: INPUT[bootstrap dual-mode spec, Anthropic model slugs] → OUTPUT[`apps/server/` Hono app skeleton, `src/config/models.js` (`resolveModel(preference)`), `.env.example`]
 - **Confidence**: HIGH
 - **Black Box**: A Hono server that boots, exposes `/healthz`, and centralizes model-slug resolution behind a stable function. No real routes yet.
@@ -74,7 +74,7 @@ Architectural decisions promised by tasks land in `memory_bank/decisions/DEC_XXX
 - **Depends on**: TASK_001
 
 ### TASK_006: Claude API Adapter
-- **Status**: Ready
+- **Status**: Complete (merged to develop)
 - **Interface**: INPUT[`(systemPrompt, userMessage, modelId)`, `ANTHROPIC_API_KEY` env, `parseAnalysisResponse` from `@gospelviral/shared`] → OUTPUT[`apps/server/src/runtime/claude-api.js` + `runtime/errors.js`, returns `Promise<AnalysisResponse>`]
 - **Confidence**: HIGH
 - **Black Box**: Anthropic REST adapter. Wraps `fetch` to `api.anthropic.com`, **delegates parsing to `parseAnalysisResponse` from `@gospelviral/shared` (no server-side parser duplicate)**, returns the canonical `AnalysisResponse`.
@@ -84,7 +84,7 @@ Architectural decisions promised by tasks land in `memory_bank/decisions/DEC_XXX
 - **Depends on**: TASK_002 (parser in shared), TASK_005 (env, logger, resolveModel)
 
 ### TASK_007: Claude CLI Adapter + Stream-JSON Parser
-- **Status**: Ready
+- **Status**: Complete (merged to develop)
 - **Interface**: INPUT[`(systemPrompt, userMessage, modelId)`, `claude` binary on PATH] → OUTPUT[`apps/server/src/runtime/claude-cli.js`, `parsers/stream-json.js`, returns `Promise<AnalysisResponse>`]
 - **Confidence**: MEDIUM
 - **Black Box**: Spawns the `claude` CLI with prompt-via-stdin and `--output-format stream-json`, consumes line-delimited events, extracts the final `result` payload, parses into `AnalysisResponse`. Reference: `nexu-io/open-design` `agents.ts` + `claude-stream.ts`.
@@ -94,7 +94,7 @@ Architectural decisions promised by tasks land in `memory_bank/decisions/DEC_XXX
 - **Depends on**: TASK_002 (parser in `@gospelviral/shared`), TASK_005 (env, logger, resolveModel), TASK_006 (adapter contract + typed error classes that CLI mirrors). API adapter goes first to validate the response contract before CLI layers process management on top.
 
 ### TASK_008: Runtime Detection
-- **Status**: Ready
+- **Status**: Complete (merged to develop)
 - **Interface**: INPUT[OS PATH] → OUTPUT[`apps/server/src/runtime/detect.js` exporting `detectRuntime(): { cli, apiKey, recommended }`]
 - **Confidence**: HIGH
 - **Black Box**: Cross-platform check for `claude` (and `openclaude` fallback) in PATH + presence of `ANTHROPIC_API_KEY`. Memoized.
@@ -104,7 +104,7 @@ Architectural decisions promised by tasks land in `memory_bank/decisions/DEC_XXX
 - **Depends on**: TASK_005
 
 ### TASK_009: Analyze + Detect Endpoints
-- **Status**: Ready
+- **Status**: Complete (merged to develop)
 - **Interface**: INPUT[TASK_006 API adapter, TASK_007 CLI adapter, TASK_008 detect] → OUTPUT[`POST /api/analyze` (JSON; SSE deferred to roadmap), `GET /api/runtime/detect`]
 - **Confidence**: MEDIUM
 - **Black Box**: HTTP surface that routes by mode (`cli` preferred when present, `api` fallback or explicit), validates input, returns canonical `AnalysisResponse` regardless of which adapter ran.
@@ -114,7 +114,7 @@ Architectural decisions promised by tasks land in `memory_bank/decisions/DEC_XXX
 - **Depends on**: TASK_006, TASK_007, TASK_008
 
 ### TASK_010: Frontend↔Backend Wire-Up + Mode Badge
-- **Status**: Ready
+- **Status**: Complete (merged to develop)
 - **Interface**: INPUT[`apps/web` app, server endpoints from TASK_009] → OUTPUT[`apps/web/src/lib/api.js` calls `/api/analyze`, Vite proxy config, `ConfigPanel` or header badge showing active mode + manual toggle]
 - **Confidence**: MEDIUM
 - **Black Box**: Replaces the direct-to-Anthropic `fetch` with a backend call. UI shows "via Claude Code CLI" or "via API key" badge; user can force-API in settings.
@@ -124,7 +124,7 @@ Architectural decisions promised by tasks land in `memory_bank/decisions/DEC_XXX
 - **Depends on**: TASK_004, TASK_009
 
 ### TASK_011: localStorage Persistence (visual configs only)
-- **Status**: Ready
+- **Status**: Complete (merged to develop)
 - **Interface**: INPUT[`subtitleConfig`, `videoConfig`, `overlayConfig`, `isConfigCollapsed`] → OUTPUT[`apps/web/src/lib/persistence.js`, App rehydrates on mount, writes on change (debounced)]
 - **Confidence**: HIGH
 - **Black Box**: One module owns the localStorage SSOT for visual presets. Analysis `results`, `url`, `transcript` deliberately session-only.
@@ -134,7 +134,7 @@ Architectural decisions promised by tasks land in `memory_bank/decisions/DEC_XXX
 - **Depends on**: TASK_004
 
 ### TASK_012: Docs Rewrite — CLAUDE.md (monorepo) + ROADMAP.md
-- **Status**: Ready
+- **Status**: Complete (merged to develop)
 - **Interface**: INPUT[finalized monorepo state] → OUTPUT[rewritten `CLAUDE.md` reflecting `apps/web`+`apps/server`+dual-mode, new `ROADMAP.md` (Apify, multi-vídeo, ZIP export, SSE streaming progress)]
 - **Confidence**: HIGH
 - **Black Box**: Documentation aligned with the post-migration repo. The artifact-era `CLAUDE.md` is archived or fully replaced.
@@ -143,6 +143,103 @@ Architectural decisions promised by tasks land in `memory_bank/decisions/DEC_XXX
 - **File**: task_012_docs_rewrite.md
 - **Depends on**: TASK_010, TASK_011
 
+### TASK_013: Card Tabs — Redes Sociais / Legenda do Vídeo
+- **Status**: Complete (merged via PR #1 on 2026-05-28)
+- **Interface**: INPUT[`bootstrap-features-fases-3-6.md` §Fase 3, current `MomentCard.jsx` right column, `App.jsx` `transcript` state, `timestampToSeconds` from `lib/helpers.js`] → OUTPUT[`apps/web/src/lib/transcript-extract.js` (`extractSegmentLines` + `extractSegmentText` helpers) + `apps/web/src/components/CardTabs.jsx` (generic, **stateless / controlled** array-prop tabs) + `MomentCard.jsx` refactor (fixed-top: hook/scripture; tabs: Redes Sociais default + Legenda do Vídeo line-per-cue; score `<details>` stays below tabs) + prop threading `App → ResultsView → MomentCard` for `transcript`, `activeCardTab`, `setActiveCardTab` + integration spec pinning global lift + Vitest suites]
+- **Confidence**: HIGH
+- **Black Box**: Right column of `MomentCard` reorganized into fixed metadata top + two tabs. Helper slices transcript by moment range deterministically (no IA, frontend-only). **Tab state (`activeCardTab`) is GLOBAL, owned by `App.jsx`** — one click flips all 5 cards together; same coherence as the existing global visual prefs. Final task file v1.3.
+- **Phase**: 3
+- **Prerequisites**: ✅ P1+P2+P3 included
+- **File**: task_013_card_tabs.md
+- **Depends on**: TASK_010 (transcript already flows end-to-end)
+
+### TASK_014: Video Upload — Backend Storage + Endpoint
+- **Status**: Complete (merged via PR #2 + follow-ups PR #3 on 2026-05-28)
+- **Interface**: INPUT[`bootstrap-features-fases-3-6.md` §Fase 4, `apps/server` Hono app, env seam, logger, route conventions] → OUTPUT[`packages/shared/src/types.js` (`VideoSource` + `VIDEO_MIME_ALLOWLIST_DEFAULT`) + `apps/server/src/lib/multipart-parser.js` (busboy streaming wrapper) + `apps/server/src/storage/video-storage.js` (factory: `init`/`save`/`get`/`stream`, streaming + atomic write + sidecar JSON) + `apps/server/src/routes/upload.js` (`POST /api/upload/video`, `GET /:id/info`) + `config/env.js` (`VIDEO_UPLOAD_DIR`/`MAX_UPLOAD_SIZE_BYTES`/`VIDEO_ALLOWED_MIMES`) + `server.js` wiring + `scripts/smoke-heap.js` + root `.gitignore` + Vitest suites]
+- **Confidence**: HIGH
+- **Black Box**: Server gains a typed STREAMING multipart upload endpoint (O(KB) RAM, proven by `smoke:heap`) that writes to a gitignored temp dir, returns a `VideoSource` handle, wipes the dir on every boot. Streaming is an architectural INVARIANT.
+- **Phase**: 4
+- **Prerequisites**: ✅ P1+P2+P3 included
+- **File**: task_014_video_upload_backend.md
+- **Depends on**: TASK_005 (server scaffold, env, logger, route conventions)
+
+### TASK_015: Video Upload — Frontend UI + Integration
+- **Status**: Complete (merged via PR #4 on 2026-05-29)
+- **Interface**: INPUT[TASK_014 OUTPUT (endpoint + `VideoSource` typedef), `App.jsx` session state, `ConfigPanel.jsx` 3-tab pattern, `lib/api.js` fetch pattern, `persistence.js` SSOT scope] → OUTPUT[`apps/web/src/lib/upload.js` (`uploadVideo` over XHR with progress/abort + typed `UploadError`) + `apps/web/src/components/VideoUploadButton.jsx` (controlled; EMPTY action-first / FILLED discrete; real progress; filename-aware error) + `ConfigPanel.jsx` 4th tab "Vídeo Fonte" + header badge + `App.jsx` `videoSource` session state + `handleReset` clear + `ResultsView.jsx` pass-through + Vitest suites + Chrome DevTools MCP smoke]
+- **Confidence**: MEDIUM (UX placement validated by smoke)
+- **Black Box**: Frontend gains a manual-upload affordance. `videoSource` lives in `App.jsx` session-only (NOT persisted). The 4th ConfigPanel tab "Vídeo Fonte" hosts the dropzone (two visual states); the header strip shows the active badge. Resets clear it. Real XHR upload progress.
+- **Phase**: 4
+- **Prerequisites**: ✅ P1+P2+P3 included
+- **File**: task_015_video_upload_frontend.md
+- **Depends on**: TASK_014 (endpoint + `VideoSource` typedef)
+
+### TASK_016: Video Stream Route (HTTP Range)
+- **Status**: Complete (merged to develop)
+- **Interface**: INPUT[`bootstrap §Fase 5`, TASK_014 storage (`stream`/`get`) + upload router + `isValidVideoId`] → OUTPUT[`storage.streamRange(id, range?)` (createReadStream, O(KB)) + `lib/range.js` (pure char-scan Range parser) + `GET /api/upload/video/:id/stream` (200 full / 206 partial / 416 / 404 / 400) + storage + route + range Vitest suites]
+- **Confidence**: HIGH
+- **Black Box**: Server serves the uploaded video to a `<video>` element with HTTP Range support (206 Partial Content), streaming via `createReadStream` — never buffering the file. Size/mime from the sidecar `VideoSource`.
+- **Phase**: 5
+- **Prerequisites**: ✅ P1+P2+P3 included
+- **File**: task_016_video_stream_route.md
+- **Depends on**: TASK_014 (storage + upload router)
+- **smoke:heap**: TRIGGERED (touches storage/video-storage.js + routes/upload.js) — P3 runs `pnpm smoke:heap`
+
+### TASK_017: SubtitleCue Primitive (shared)
+- **Status**: Complete (merged via PR #6 on 2026-05-29)
+- **Interface**: INPUT[`bootstrap §Fase 5`, `apps/web/src/lib/transcript-extract.js` parser, TASK_013 promotion clause, `types.js`] → OUTPUT[`packages/shared/src/transcript-lines.js` (consolidated parser) + `packages/shared/src/subtitle-cues.js` (`buildSubtitleCues → SubtitleCue[]`) + `SubtitleCue` typedef + barrel + web `transcript-extract.js` delegates to shared (no dup) + Vitest suites]
+- **Confidence**: HIGH
+- **Black Box**: `SubtitleCue[]` becomes a bilateral primitive in `@gospelviral/shared` — the single source of truth for subtitle timing shared by the Phase 5 player and the Phase 6 burned-in export. One cue per transcript line (granularity untouched); `end` implied by the next line. Transcript parsing consolidated in shared (honors TASK_013 promotion clause).
+- **Phase**: 5
+- **Prerequisites**: ✅ P1+P2+P3 included
+- **File**: task_017_subtitle_cues.md
+- **Depends on**: TASK_013 (transcript-extract exists; gets consolidated)
+- **smoke:heap**: NOT triggered (no hot-path file)
+
+### TASK_018: Play + Subtitle Sync (frontend)
+- **Status**: Complete (merged via PR #7 on 2026-05-29)
+- **Interface**: INPUT[TASK_016 stream route, TASK_017 cues, TASK_015 videoSource, current `SubtitlePreview` + `useChunkRotation` + `MomentCard`/`App`] → OUTPUT[`useVideoPlayback` hook + `cueAt` selector + `SubtitlePreview` refactor (`<video>` + central play button + cue-driven subtitle + drag gated by mode + remove 2.2s rotation/badge) + `App.jsx` `playingIndex` + derived `mode` + pause-on-config-open + ResultsView/MomentCard threading + delete `useChunkRotation` + Vitest suites + Chrome DevTools MCP smoke]
+- **Confidence**: MEDIUM (global playback orchestration is the heaviest state)
+- **Black Box**: Each card's 9:16 preview plays the uploaded `<video>` with the subtitle synced to transcript timecodes. Panel-collapse doubles as a GLOBAL mode (PLAYER↔EDIÇÃO); single `playingIndex` in App enforces one-plays-at-a-time; opening a config tab pauses everything. The arbitrary 2.2s rotation is removed. No `videoSource` → today's static-thumbnail edit behavior (no regression).
+- **Phase**: 5
+- **Prerequisites**: ✅ P1+P2+P3 included
+- **File**: task_018_play_subtitle_sync.md
+- **Depends on**: TASK_015, TASK_016, TASK_017
+- **smoke:heap**: NOT triggered (frontend-only)
+
+### TASK_019: Player + Subtitle real-use fixes + streaming/schema hardening
+- **Status**: Complete (merged via PR #8 on 2026-05-29)
+- **Interface**: INPUT[TASK_018 follow-up insumos + findings A–D + real `analyze-60` transcript/moments + affected web/shared/server files] → OUTPUT[D4 transcript parser (real editor-timecode format, shared SSOT) + D3 `selectVisibleChunk` (panel SSOT chars/lines) + D5 font `<link>` (prod-build fix) + D1 `<video>` poster both modes + D2 pause/toggle + D6 cold-open segment sequence (`segments[]` + `parseColdOpenRange`/`buildPlaybackSegments`/`advanceSegment`) + O2 range chunk cap + O3 size typedef + O4 remove stream-debug]
+- **Confidence**: MEDIUM (useVideoPlayback double-touch D2+D6)
+- **Black Box**: Fix the real-use defects of the TASK_018 player against a real sermon + real upload — uploaded video as canvas source both modes (D1) with play/pause (D2); panel as SSOT for subtitle shape incl. the font that never loaded in prod (D3/D5); parser learns the real editor-timecode transcript so cues populate (D4); cold-open peak plays before the full cut (D6); plus streaming/schema hardening (O2 range-to-EOF, O3 typedef, O4 debug cleanup). (O1 analyze-504 spun out → TASK_020.)
+- **Phase**: 5 (follow-up to TASK_018)
+- **Prerequisites**: ✅ P1+P2+P3 included
+- **File**: task_019_player_subtitle_streaming_fixes.md
+- **Depends on**: TASK_018 (merged via PR #7) — branch from `develop`
+- **smoke:heap**: TRIGGERED (O2 + O4 touch `routes/upload.js`)
+- **Decomposition**: REQUIRED (HIGH complexity) — Pass 2 (6 subtasks: 019.1 quick-wins · 019.2 parser · 019.3 chunk · 019.4 video poster · 019.5 hook D2+D6 · 019.6 range cap)
+
+### TASK_020: Analyze long-run resilience (kill spurious 504)
+- **Status**: Complete (merged via PR #9 on 2026-05-30) — spike pivoted: root cause was the 120s DEFAULT timeout firing because `pnpm dev` never loaded `.env.local`; fix = `--env-file-if-exists` + default 120s→600s. SSE descoped (DEC_021 NOT reversed).
+- **Interface**: INPUT[`routes/analyze.js` withTimeout/abort, `lib/api.js`, vite proxy, `server.js` serve timeouts, DEC_021] → OUTPUT[long `/api/analyze` connection held alive (SSE / keep-alive / timeout tuning — TBD) so proxy/browser don't drop it → no spurious 504; genuine timeout still clean]
+- **Confidence**: LOW (architectural; transport contract; may reverse DEC_021)
+- **Black Box**: A real multi-minute analysis completes without a spurious 504 (connection held end-to-end), while a genuine over-`ANALYZE_TIMEOUT_MS` run still returns a clean `timeout` error. AUTO == CLI (same code path, not a mode bug).
+- **Phase**: 5 (spun out of TASK_019 / O1)
+- **Prerequisites**: ✅ P1+P2+P3 included
+- **File**: task_020_analyze_504_streaming.md
+- **Depends on**: TASK_009/010 (analyze transport)
+- **smoke:heap**: N/A (no hot-path file — confirm)
+
+### TASK_021: Standardize file upload (click + drag) across overlay + video
+- **Status**: Complete (merged via PR #10 on 2026-05-30)
+- **Interface**: INPUT[`OverlayControls.jsx` (broken click + no drag), `VideoUploadButton.jsx` (click+drag standard), upload tests] → OUTPUT[shared `useFileSelect` hook (`{isDragging, open, inputProps, zoneProps}`) — explicit `ref.click()` picker + drag preventDefault; overlay fixed (click opens picker, drag applies, select-none, inline MIME error); video standardized on the same hook]
+- **Confidence**: HIGH (root cause reproduced in-browser; small shared primitive)
+- **Black Box**: Both overlay + video accept a click (reliably opens the OS picker — not the fragile `<label>`+`display:none`) AND drag-n-drop (applies the file, no browser navigation), via one `useFileSelect` SSOT. Fixes the overlay upload that selected text on click and opened the image in a new tab on drop.
+- **Phase**: 5 (UX follow-up)
+- **Prerequisites**: ✅ P1+P2+P3 included
+- **File**: task_021_standardize_file_upload.md
+- **Depends on**: TASK_019 (overlay/video preview)
+- **smoke:heap**: N/A (web-only — no upload-route/video-storage/multipart file)
+
 ## Task Creation Log
 2026-05-27 TASK_001..TASK_012 created — Pass 1 high-level plan, awaiting human review before Pass 2 decomposition per task.
 2026-05-27 Registry refined: DEC folder convention recorded; TASK_007 dependency widened to include TASK_006; TASK_001 GitFlow special-cased for `main`→`develop` bootstrap; TASK_004 visual-parity gate clarified as human-only (Playwright snapshot deferred); TASK_011 schema-versioning + migration-safety invariants tightened; "viral-cristao-artifact.jsx byte-identical until TASK_012" invariant propagated to all tasks that read it.
@@ -150,10 +247,29 @@ Architectural decisions promised by tasks land in `memory_bank/decisions/DEC_XXX
 2026-05-28 **Pass 1 reviewed and approved by human.** All 12 task files (TASK_001..TASK_012) moved from `Planning` → `Ready` ("Ready" is a protocol extension meaning "Black Box Interface approved, awaiting Pass 2 decomposition + execution"; standard protocol statuses Active/Blocked/Complete/Archived remain unchanged downstream). Pass 2 will be initiated in a fresh conversation per task — task files are self-contained and do not require the planning-phase chat history. Two Pass 2 implementation notes captured in their respective task files: TASK_007 records `kill(-pid)` as a POSIX-only abort strategy with macOS as the target (Windows support deferred); TASK_009 records that `build-user-message.js` must paste the artifact's `fullPrompt` template literal as a frozen fixture rather than rely on a line-number reference that drifts.
 2026-05-28 **Sonar scanner switched to `@sonar/scan` (Node CLI; binary `sonar`).** All references to `sonar-scanner` across task files, registry conventions, and CLAUDE.md replaced with `sonar`. TASK_001 OUTPUT enumerates the `sonar-project.properties` contents (`projectKey=idaliopessoa_gospelviral`, `organization=idaliopessoa`, `host.url=https://sonarcloud.io`, sources/tests/lcov for the three workspaces) and the `.env.local` rule (`SONAR_TOKEN` lives there only, gitignored before first `git add`). TASK_001 ships a `pnpm sonar` script wrapping `@sonar/scan`. New DECs registered: `DEC_XXX_sonar_node_scanner.md` (scanner choice) and `DEC_XXX_scaffold_coverage_gate.md` ("Coverage on New Code" Quality Gate FAIL on the scaffold scan is EXPECTED — report to human, never bypass; three remediation paths the human picks from). Risk Assessment expanded with token-leak + install-variant rows. Token bytes recorded only in execution-plan memory (~/.claude/projects/.../execution_plan_pass_2.md, not in git).
 2026-05-28 **Playwright removed from scaffold (TASK_001 DEC).** Browser-driven UI verification routes through the Chrome DevTools MCP that the agent connects to (`navigate`, `take_screenshot`, `list_console_messages`, `list_network_requests`, `evaluate`, `click`, `fill`, `wait_for`). All task P3 sections updated: server-only tasks declare "Browser smoke (Chrome DevTools MCP): skipped"; UI tasks (TASK_004 / TASK_010 / TASK_011 / TASK_012) replace Playwright instructions with explicit MCP sequences (navigate → screenshot → console + network assertions → evaluate for state introspection). TASK_004 risk row and DEC updated to reflect MCP screenshots as parity evidence. TASK_012 ROADMAP item rewritten to position Playwright as the future swap-in if pixel-diff snapshot regression becomes worthwhile. Subagent `.claude/agents/black-box-auditor.md` created — read-only architectural auditor invoked at the end of every Pass 2 task to produce a GAP REPORT before merge. Project memory `~/.claude/projects/.../memory/execution_plan_pass_2.md` pins the autonomous Pass 2 cycle for fresh sessions.
+2026-05-28 **Phase 1+2 migration complete (v1.0.0 released).** Bootstrap `bootstrap-features-fases-3-6.md` introduces Phases 3–6 (card tabs, video ingestion, play + subtitle sync, MP4 export with burned subtitles). Sequencing 3 → 4 → 5 → 6 with human gate between phases.
+2026-05-28 **TASK_013 created (Phase 3 Pass 1).** Sole task for Phase 3: card tabs (Redes Sociais default + Legenda do Vídeo). Decisions captured in task file: (D1) single task, (D2) score `<details>` stays outside tabs, (D3) "limpar" regex deferred to ROADMAP, (D4) helper in `apps/web/src/lib/` (web-only until 2nd consumer), (D5) per-card local tab state (not lifted).
+2026-05-28 **TASK_013 Pass 1 approved by human, D5 reversed.** Tab state (`activeCardTab`) is now **GLOBAL**, owned by `App.jsx` and threaded down via props — same coherence pattern as `subtitleConfig` / `videoConfig` / `overlayConfig` / `isConfigCollapsed`; one click flips all 5 cards. `CardTabs` becomes stateless / fully controlled. D4 reinforced with explicit promotion clause: if FASE 6 needs the same extractor, file MIGRATES to `packages/shared` (no duplication). Persistence of `activeCardTab` deferred (schema bump v1→v2 in a separate follow-up task). Task file bumped to v1.1.
+2026-05-28 **TASK_013 merged via PR #1 (squash + delete branch).** Final task file v1.3 includes ratification of `extractSegmentLines` (per-cue render, smoke-driven adjustment) and the `CardTabs` `tabs[]` array prop API. SonarCloud Quality Gate PASS, new-code coverage 95.4%, `javascript:S3776 = 0`, black-box auditor "AUDITORIA LIMPA". Three project memories saved: [[sonar_env_sourcing]], [[sonar_quality_gate_gotchas]], [[pnpm_workspace_test_coverage_flake]].
+2026-05-28 **TASK_014 + TASK_015 created (Phase 4 Pass 1).** Two-task split for video upload: TASK_014 = backend (storage module + `POST /api/upload/video` + `GET /info` + cleanup-on-boot + `VideoSource` bilateral primitive in `@gospelviral/shared`); TASK_015 = frontend (`VideoUploadButton` stateless controlled in a new 4th `ConfigPanel` tab "Vídeo Fonte" + `uploadVideo` client + session-only `videoSource` state in `App.jsx`, NOT persisted).
+2026-05-28 **TASK_014 + TASK_015 Pass 1 approved by human, with adjustments.** Both task files bumped to v1.1. Adjustments: (D3) `VideoSource` stays a **reference** to the file; if Phase 6 export needs server-side metadata (codec / fps / resolution / duration for FFmpeg) it lands as a separate module `apps/server/src/runtime/video-metadata.js`, NOT retrofitted into the primitive. Recorded in TASK_014 "Known follow-ups". (D5) the "Vídeo Fonte" tab has a hard two-state visual INVARIANT: EMPTY = generous drop area + prominent CTA "Subir vídeo do trecho" (action-first); FILLED = a single discrete line "filename · size · remover". The component test asserts the EMPTY container is taller and has the CTA, the MCP smoke captures both states. Without the distinction, the tab reads as "one more setting" and the conceptual frame breaks. (D6) size cap default raised 500 MiB → 2 GiB (`MAX_UPLOAD_SIZE_BYTES`, default `2147483648`); error copy updated to "Limite 2 GB". Operational notes from TASK_013 memories are referenced in both P2 + P3 sections of TASK_014 and TASK_015: [[sonar_env_sourcing]], [[pnpm_workspace_test_coverage_flake]], [[sonar_quality_gate_gotchas]].
+2026-05-28 **TASK_014 Pass 2 reviewed by human, streaming pipeline promoted to architectural INVARIANT.** Task file bumped to v1.2. Key change: the "parseBody buffers in RAM" item is no longer a risk to weigh — it is a hard contract. New DECs: (1) streaming-first pipeline `req.body → Readable.fromWeb → busboy wrapper → storage.save({ stream, ... }) → fs.createWriteStream → atomic rename`, memory residency `O(KB)` during a 2 GiB upload; (2) `busboy` chosen as the streaming multipart parser, wrapped in `apps/server/src/lib/multipart-parser.js` per §"Wrap external dependencies" so the route never imports busboy directly; (3) sidecar JSON `<id>.json` next to `<id>.<ext>` holds the typed `VideoSource` (filename, mime, uploadedAt preserved); (4) factory DI `createVideoStorage({ dir, logger })` mirrors `createAnalyzeRouter` / `createDetectRouter`; (5) test size-cap exercises use `maxBytes: 1024` injected via DI (no 2 GiB Blobs); (6) disk path `${dir}/${uuid}.${ext}`, original filename NEVER on disk (only in sidecar) — path traversal non-applicable by design, mime→ext from a whitelist table, uuid from `crypto.randomUUID()`; (7) heap-invariant smoke `smoke:heap` is **in-process** (Node script, imports storage + parser directly, samples `process.memoryUsage().heapUsed` every 100 ms during a 1.5 GiB upload, asserts `delta < 50 MB`) — NOT an HTTP debug endpoint (zero attack surface, measures JS heap not RSS). Smoke FAIL = PR BLOCKED, no bypass. Subtasks expanded 6 → 7 (multipart-parser wrapper becomes its own black box). The earlier "1.5 GiB curl smoke before merge" wording was replaced by the heap-invariant assertion.
+
+2026-05-29 **Phase 4 complete (PR #2 + #3 + #4 merged).** TASK_014 (backend streaming upload + smoke:heap invariant), TASK_014 follow-ups (smoke Gate B + parseBody invariant test), TASK_015 (frontend upload UI, XHR progress) all on `develop`. Upload validated in real use by human.
+2026-05-29 **TASK_016 + TASK_017 + TASK_018 created (Phase 5 Pass 1).** Three-task split for play + subtitle sync: TASK_016 = backend video stream route with HTTP Range (206) over `createReadStream` (smoke:heap TRIGGERED); TASK_017 = `SubtitleCue[]` bilateral primitive in `@gospelviral/shared` + transcript-parser consolidation (honors TASK_013 promotion clause); TASK_018 = frontend `<video>` player (central play button, GLOBAL mode derived from `isConfigCollapsed`, single `playingIndex` for one-plays-at-a-time, config-open-pauses, cue-driven subtitle replacing the removed 2.2s rotation, static-thumbnail fallback without `videoSource`). Pass 1 decisions pending human review: (D1) 3-task split by domain (server/shared/web); (D2) consolidate transcript parser into shared; (D3) storage `streamRange` + pure `lib/range.js`; (D4) `playingIndex` global in App + `mode` derived (not stored); (D5) EDIÇÃO shows static cue[0], PLAYER shows currentTime-driven cue; (D6) player only with `videoSource`; (D7) cue `end` = next cue start / last = segment end, absolute-timeline seconds; (D-end) pause-at-cut-end vs loop — flagged for human.
+
+2026-05-29 **Phase 5 Pass 1 approved by human; time-reference gap closed.** D4 (playingIndex global + derived mode) confirmed as the correct foundation. D-end = pause-at-cut-end CONFIRMED, with the added rule: pressing play after a pause-at-end RESTARTS from `timestamp_start` (not a no-op resume from `endSec`) — wired into `useVideoPlayback.play()` in TASK_018. NEW cross-task INVARIANT added to all three task files (016/017/018): **all time is seconds ABSOLUTE on the full uploaded video file's timeline** — transcript timestamps, `cue.start`/`cue.end`, `<video>.currentTime`, and the seek that drives the 206 Range request all share that one scale; cues are NEVER relative-to-cut (a 47:30 line → cue.start 2850); TASK_018 compares currentTime against cues with no offset math. This forbids the silent mismatch where one task assumes absolute and another relative, which would make the subtitle never sync. D1/D2/D3/D5/D6/D7 all confirmed. Execution order 016 → 017 → 018 (016/017 independent), human gate between each Pass 2.
+
+2026-05-29 **TASK_017 merged via PR #6 (squash + delete branch).** SubtitleCue bilateral primitive + `buildSubtitleCues` in `@gospelviral/shared`; transcript line-parser consolidated (`transcript-lines.js`) + clock parser moved to `time.js` (web `helpers.js`/`transcript-extract.js` delegate — scope addition vs DEC D2, forced by the shared-cannot-import-web rule: canonical moved + re-exported, never duplicated). TIME REFERENCE invariant pinned (47:30→cue.start 2850, not relative-to-cut). SonarCloud QG PASS, new-code coverage 95.6%, `javascript:S3776 = 0`, zero new-code issues; black-box-auditor "AUDITORIA LIMPA" via the correct fix→re-audit cycle (no discretionary skip). Three project memories saved: [[shared-no-import-from-web]], [[ssot-discerning-not-dry-maxing]], [[auditor-gate-no-discretionary-skip]]. smoke:heap NOT triggered (no hot-path file). Phase 5: 016 + 017 done; TASK_018 (consumer) next.
+
+2026-05-29 **TASK_019 created (Pass 1) — TASK_018 follow-up from real-use testing.** 10 defects from testing the player against a real 103-min sermon + a real 1.56 GB upload: D1 video-cover-after-upload, D2 no-pause, D3 chars/lines ignored (chunkText removed), D4 "Transcript indisponível" (ROOT: real transcript is editor timecode `HH:MM:SS:FF - … / Unknown / text` — parser expects `MM:SS text`), D5 font change no-op (ROOT: `@import` after `@tailwind` → stripped by prod build), D6 cold-open out of order (peak-first then full cut), + the 4 formerly out-of-scope: O1 analyze-504 (proxy/timeout abort; SSE/keep-alive roadmap), O2 stream-`bytes=START-`-to-EOF, O3 `size` typedef (number vs S/M/L), O4 remove temp `[stream-debug]`. Investigated by 4 parallel architect-persona agents → insumos consolidated in `evidence/local-smoke/task_018_followup_INSUMOS.md` (+ findings A–D, real `analyze-60` fixtures). Adopted decisions (1–7) recorded in the task file. Complexity = 4 HIGH → decomposition REQUIRED; **Pass 2 (subtask breakdown) is the next step** with human review. Cross-cutting: `useVideoPlayback` touched by D2+D6 (one coordinated refactor); D4→D3 order; D5/D1/O3/O4 quick wins; O1 candidate to split out. Cleanup pending: revert the uncommitted `[stream-debug]` in `routes/upload.js`.
+
+2026-05-29 **TASK_018 merged via PR #7 (squash + delete branch).** Cue-synced `<video>` player + PLAYER/EDIÇÃO mode. Phase 5 (016+017+018) complete. Real-use testing surfaced follow-up defects → TASK_019.
+2026-05-29 **O1 (analyze-504) spun out of TASK_019 → TASK_020 (own task)** per human decision — it is architectural (transport contract, possible DEC_021 reversal). TASK_019 retains D1–D6 + O2/O3/O4. TASK_019 branches from `develop` (PR #7 merged first).
 
 ## Task ID Sequence
-Last Used: TASK_012
-Next Available: TASK_013
+Last Used: TASK_020
+Next Available: TASK_021
 
 ## Conventions Snapshot (used by every task)
 

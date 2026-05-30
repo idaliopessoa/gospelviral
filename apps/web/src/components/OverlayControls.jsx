@@ -1,16 +1,16 @@
-import { useRef } from 'react';
+import { useState } from 'react';
 import { Image as ImageIcon, Upload } from 'lucide-react';
+import { useFileSelect } from '../hooks/useFileSelect.js';
 
 export default function OverlayControls({ config, setConfig }) {
-  const inputRef = useRef(null);
+  const [error, setError] = useState(null);
 
-  function handleUpload(e) {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  function handleFile(file) {
     if (!file.type.startsWith('image/')) {
-      alert('Selecione um arquivo de imagem (PNG recomendado para áreas vazadas com transparência)');
+      setError('Selecione uma imagem (PNG recomendado para áreas vazadas com transparência).');
       return;
     }
+    setError(null);
     const reader = new FileReader();
     reader.onload = (ev) => {
       setConfig({ dataURL: ev.target.result, opacity: 1, filename: file.name });
@@ -18,9 +18,17 @@ export default function OverlayControls({ config, setConfig }) {
     reader.readAsDataURL(file);
   }
 
+  // Click + drag share one primitive: click reliably opens the OS picker
+  // (ref.click(), not a <label>+display:none that fell through to text
+  // selection); drop applies the file instead of the browser opening the image.
+  const { isDragging, inputProps, zoneProps } = useFileSelect({
+    accept: 'image/png,image/*',
+    onFile: handleFile,
+  });
+
   function clear() {
     setConfig({ dataURL: null, opacity: 1, filename: null });
-    if (inputRef.current) inputRef.current.value = '';
+    setError(null);
   }
 
   return (
@@ -59,17 +67,22 @@ export default function OverlayControls({ config, setConfig }) {
             </button>
           </div>
         ) : (
-          <label className="cursor-pointer flex items-center gap-2 px-4 py-3 border-2 border-dashed border-stone-300 hover:border-stone-900 hover:bg-stone-50 rounded-sm transition-colors">
-            <Upload size={14} className="text-stone-500" />
-            <span className="text-xs text-stone-700">Enviar PNG com área vazada</span>
-            <input
-              ref={inputRef}
-              type="file"
-              accept="image/png,image/*"
-              onChange={handleUpload}
-              className="hidden"
-            />
-          </label>
+          <>
+            <button
+              type="button"
+              {...zoneProps}
+              className={`w-full select-none flex items-center gap-2 px-4 py-3 border-2 border-dashed rounded-sm transition-colors hover:border-stone-900 hover:bg-stone-50 ${
+                isDragging ? 'border-stone-900 bg-stone-50' : 'border-stone-300'
+              }`}
+            >
+              <Upload size={14} className="text-stone-500 shrink-0" />
+              <span className="text-xs text-stone-700">
+                {isDragging ? 'Solte o PNG aqui' : 'Enviar PNG com área vazada'}
+              </span>
+            </button>
+            <input {...inputProps} className="hidden" />
+            {error && <p className="mt-1 text-[11px] text-red-700">{error}</p>}
+          </>
         )}
       </div>
       <div className="md:col-span-4 flex flex-col gap-1">
