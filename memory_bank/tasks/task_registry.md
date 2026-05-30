@@ -219,7 +219,7 @@ Architectural decisions promised by tasks land in `memory_bank/decisions/DEC_XXX
 - **Decomposition**: REQUIRED (HIGH complexity) — Pass 2 (6 subtasks: 019.1 quick-wins · 019.2 parser · 019.3 chunk · 019.4 video poster · 019.5 hook D2+D6 · 019.6 range cap)
 
 ### TASK_020: Analyze long-run resilience (kill spurious 504)
-- **Status**: Planning
+- **Status**: Complete (merged via PR #9 on 2026-05-30) — spike pivoted: root cause was the 120s DEFAULT timeout firing because `pnpm dev` never loaded `.env.local`; fix = `--env-file-if-exists` + default 120s→600s. SSE descoped (DEC_021 NOT reversed).
 - **Interface**: INPUT[`routes/analyze.js` withTimeout/abort, `lib/api.js`, vite proxy, `server.js` serve timeouts, DEC_021] → OUTPUT[long `/api/analyze` connection held alive (SSE / keep-alive / timeout tuning — TBD) so proxy/browser don't drop it → no spurious 504; genuine timeout still clean]
 - **Confidence**: LOW (architectural; transport contract; may reverse DEC_021)
 - **Black Box**: A real multi-minute analysis completes without a spurious 504 (connection held end-to-end), while a genuine over-`ANALYZE_TIMEOUT_MS` run still returns a clean `timeout` error. AUTO == CLI (same code path, not a mode bug).

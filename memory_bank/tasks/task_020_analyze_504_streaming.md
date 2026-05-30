@@ -1,7 +1,7 @@
 # TASK_020: Analyze long-run resilience — kill the spurious 504
 timestamp: 2026-05-29T00:00:00Z
 version: 1.0
-status: Active — fix implemented + user-verified (200); pending gates + PR
+status: Complete (merged via PR #9 on 2026-05-30)
 owner: unassigned
 confidence: HIGH (root cause pinned by spike + fix verified with a real run)
 phase: 5 (spun out of TASK_019 / O1)
