@@ -53,10 +53,11 @@ function clamp(n, lo, hi) {
   return n;
 }
 
-// Fraction of the line-wrap width that `charsPerScreen` characters fill, per
-// `size` (TASK_022). All ≤ 1 so a charsPerScreen-char line never reaches the
-// wrap → `lines` stays a true visual cap.
-const SUBTITLE_FILL = { S: 0.68, M: 0.8, L: 0.92 };
+// Font size as a fraction of the canvas width, per `size` (TASK_022). Canvas-
+// relative so the 280-px preview and the 1080-px export share one proportion
+// (preview == export). Tuned to the prior preview px (≈14/17/21 at a 340-px
+// canvas). The font depends ONLY on `size` — never on charsPerScreen.
+const SUBTITLE_SIZE_FRACTION = { S: 0.042, M: 0.05, L: 0.062 };
 // Fallback glyph advance (fraction of font-size) when the real font can't be
 // measured (jsdom). ~0.5 ≈ a typical proportional sans.
 const FALLBACK_CHAR_ADVANCE_EM = 0.5;
@@ -93,28 +94,40 @@ export function measureCharAdvanceEm(fontFamily) {
 }
 
 /**
- * Derive the subtitle font size (px) from the panel's `charsPerScreen`, the
- * measured canvas width, and the FONT'S OWN average advance (TASK_022 — SSOT
- * for subtitle size). Sizes so `charsPerScreen` real characters fill
- * `SUBTITLE_FILL[size]` of the line-wrap width — for the actual font, so narrow
- * (Bebas) and wide (Archivo) fonts fill the same fraction yet both stay within
- * one line. More chars → smaller font; scales with the canvas width, so the
- * 280-px preview and the 1080-px export share one proportion (preview ==
- * export). `size` (S/M/L) sets how full the line is.
+ * Derive the subtitle font size (px) from ONLY `size` + the measured canvas
+ * width (TASK_022 — SSOT for subtitle size). Independent of charsPerScreen, so
+ * the chars/tela slider never changes the font size. Scales with the canvas so
+ * the 280-px preview and the 1080-px export share one proportion (preview ==
+ * export).
  *
  * @param {number} canvasWidthPx measured preview/canvas width in px
- * @param {number} charsPerScreen target characters per line (panel slider)
  * @param {'S'|'M'|'L'} size
- * @param {number} [advanceEm] font advance per em (defaults to the fallback)
  * @returns {number} font size in px (rounded to 0.1)
  */
-export function deriveSubtitleFontPx(canvasWidthPx, charsPerScreen, size, advanceEm = FALLBACK_CHAR_ADVANCE_EM) {
-  const fill = SUBTITLE_FILL[size] ?? SUBTITLE_FILL.M;
-  const chars = charsPerScreen > 0 ? charsPerScreen : 1;
+export function deriveSubtitleFontPx(canvasWidthPx, size) {
+  const frac = SUBTITLE_SIZE_FRACTION[size] ?? SUBTITLE_SIZE_FRACTION.M;
+  return Math.round(canvasWidthPx * frac * 10) / 10;
+}
+
+/**
+ * Effective characters per line: the panel's desired `charsPerScreen`, capped
+ * by how many of the actual font fit one wrap-width line at the (size-driven)
+ * font size (TASK_022). This is what `chars/tela` controls — the line WIDTH —
+ * while keeping `lines` a true visual cap (a `perLine×lines` chunk wraps to at
+ * most `lines` rows). Never raises the font; only narrows/limits the line.
+ *
+ * @param {number} charsPerScreen panel slider (desired chars per line)
+ * @param {number} canvasWidthPx measured canvas width in px
+ * @param {number} fontPx the size-driven font size (from deriveSubtitleFontPx)
+ * @param {number} [advanceEm] font advance per em (defaults to the fallback)
+ * @returns {number} effective chars per line (≥ 1)
+ */
+export function subtitleCharsPerLine(charsPerScreen, canvasWidthPx, fontPx, advanceEm = FALLBACK_CHAR_ADVANCE_EM) {
   const adv = advanceEm > 0 ? advanceEm : FALLBACK_CHAR_ADVANCE_EM;
   const wrapPx = canvasWidthPx * SUBTITLE_LINE_MAX_FRACTION;
-  const px = (wrapPx * fill) / (chars * adv);
-  return Math.round(px * 10) / 10;
+  const fit = Math.max(1, Math.floor(wrapPx / (adv * fontPx)));
+  const desired = charsPerScreen > 0 ? charsPerScreen : 1;
+  return Math.min(desired, fit);
 }
 
 /**

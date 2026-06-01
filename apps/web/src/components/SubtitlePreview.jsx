@@ -9,6 +9,7 @@ import {
   timestampToSeconds,
   selectVisibleChunk,
   deriveSubtitleFontPx,
+  subtitleCharsPerLine,
   measureCharAdvanceEm,
   SUBTITLE_LINE_MAX_FRACTION,
 } from '../lib/helpers.js';
@@ -26,16 +27,15 @@ function resolveBackgroundColor(background, bgColor) {
   return 'transparent';
 }
 
-function buildTextStyle(config, canvasWidthPx, advanceEm) {
+function buildTextStyle(config, fontPx) {
   const hasFill = config.background === 'translucent' || config.background === 'solid';
   return {
     fontFamily: `'${config.font}', sans-serif`,
     color: config.textColor,
-    // Font derived from charsPerScreen + the measured canvas width + the FONT'S
-    // own advance (TASK_022): charsPerScreen chars fill the line for that font,
-    // scaling identically for the preview and the 1080 export (preview ==
-    // export).
-    fontSize: `${deriveSubtitleFontPx(canvasWidthPx, config.charsPerScreen, config.size, advanceEm)}px`,
+    // Font size comes ONLY from `size` (scaled to the canvas) — the chars/tela
+    // slider never changes it (TASK_022). It scales identically for the preview
+    // and the 1080 export (preview == export).
+    fontSize: `${fontPx}px`,
     fontWeight: 700,
     lineHeight: 1.25,
     textAlign: 'center',
@@ -265,16 +265,29 @@ export default function SubtitlePreview({
   // panel is the SSOT for on-screen text shape; preview == export), and the
   // visible chunk advances with currentTime inside the cue window. Edit mode
   // pins chunk[0] (clock = window start). Highlight runs on the VISIBLE chunk.
+  // Subtitle sizing (TASK_022): the font comes ONLY from `size`; `chars/tela`
+  // sets the effective chars-per-line (line WIDTH), capped to what fits the
+  // size-driven font on the canvas, so `lines` stays a true visual cap and the
+  // slider never changes the font. The chunk is split by that effective perLine.
+  const advanceEm = useMemo(() => measureCharAdvanceEm(config.font), [config.font]);
+  const fontPx = deriveSubtitleFontPx(canvasSize.width, config.size);
+  const perLine = subtitleCharsPerLine(config.charsPerScreen, canvasSize.width, fontPx, advanceEm);
+  const lineWidthPx = Math.min(
+    Math.round(canvasSize.width * SUBTITLE_LINE_MAX_FRACTION),
+    Math.ceil(perLine * advanceEm * fontPx) + 6,
+  );
+
   const cue = cueAt(cues, currentTime);
   const sourceText = cue?.text ?? moment.key_quote ?? moment.hook_title ?? '';
   const cueWindow = cue ? { start: cue.start, end: cue.end } : { start: startSec, end: endSec };
   const clock = editable ? cueWindow.start : currentTime;
-  const subtitleText = selectVisibleChunk(sourceText, clock, cueWindow, config);
+  const subtitleText = selectVisibleChunk(sourceText, clock, cueWindow, {
+    charsPerScreen: perLine,
+    lines: config.lines,
+  });
   const highlighted = highlightText(subtitleText, config);
   const anchorPercent = SUBTITLE_ANCHOR_PERCENT[config.position] ?? SUBTITLE_ANCHOR_PERCENT.bottom;
-  const advanceEm = useMemo(() => measureCharAdvanceEm(config.font), [config.font]);
-  const textStyle = buildTextStyle(config, canvasSize.width, advanceEm);
-  const lineWidthPx = Math.round(canvasSize.width * SUBTITLE_LINE_MAX_FRACTION);
+  const textStyle = buildTextStyle(config, fontPx);
 
   // Drag is gated to EDIÇÃO mode: in PLAYER mode onCommit is undefined, so
   // usePointerDrag's pointerdown short-circuits and the layers are static.

@@ -24,3 +24,23 @@ controls density (more chars → smaller font); `size` (S/M/L) sets fill. Font
 scales with canvas width → preview == 1080 export by construction.
 
 Screenshot: `lines1-single-line.png` (LINHAS=1, one line).
+
+## Follow-up correction (review feedback)
+First pass coupled the font size to `charsPerScreen` (font shrank as chars/tela
+grew) — wrong. Corrected so the three knobs are orthogonal:
+- **`size`** (S/M/L) → font size only (S 14.3 px, L 21.1 px on a 340 canvas).
+- **`chars/tela`** → line WIDTH (effective chars-per-line, capped to what fits)
+  — never the font.
+- **`lines`** → true visual cap.
+
+Re-verified live (size L, LINHAS=1):
+| chars/tela | font px | rendered lines | text-box width |
+|---|---|---|---|
+| 18 | 21.1 | 1 | 138 px |
+| 36 | 21.1 | 1 | — |
+| 50 | 21.1 | 1 | 319 px |
+
+Font **constant** across the slider (was the bug); box width tracks chars/tela;
+`size` S→14.3 / L→21.1 still drives the font. Screenshot:
+`chars-slider-no-font-change.png`.
+

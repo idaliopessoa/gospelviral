@@ -6,6 +6,7 @@ import {
   chunkText,
   selectVisibleChunk,
   deriveSubtitleFontPx,
+  subtitleCharsPerLine,
   measureCharAdvanceEm,
   SUBTITLE_LINE_MAX_FRACTION,
 } from './helpers.js';
@@ -189,59 +190,76 @@ describe('selectVisibleChunk (D3 — panel SSOT)', () => {
   });
 });
 
-describe('deriveSubtitleFontPx (TASK_022 — chars-driven subtitle size)', () => {
-  it('shrinks the font as charsPerScreen grows (more chars per line)', () => {
-    // Act
-    const few = deriveSubtitleFontPx(280, 18, 'M');
-    const many = deriveSubtitleFontPx(280, 36, 'M');
+describe('deriveSubtitleFontPx (TASK_022 — size-driven, chars-independent)', () => {
+  it('does NOT change with charsPerScreen (font depends only on size)', () => {
+    // Act — chars/tela slider must never move the font size
+    const a = deriveSubtitleFontPx(280, 'M');
+    const b = deriveSubtitleFontPx(280, 'M');
 
-    // Assert
-    expect(few).toBeGreaterThan(many);
+    // Assert — same size+canvas → same px regardless of any chars value
+    expect(a).toBe(b);
   });
 
-  it('grows the font with size S < M < L for the same chars', () => {
+  it('grows the font with size S < M < L', () => {
     // Act + Assert
-    const s = deriveSubtitleFontPx(280, 30, 'S');
-    const m = deriveSubtitleFontPx(280, 30, 'M');
-    const l = deriveSubtitleFontPx(280, 30, 'L');
-    expect(s).toBeLessThan(m);
-    expect(m).toBeLessThan(l);
+    expect(deriveSubtitleFontPx(280, 'S')).toBeLessThan(deriveSubtitleFontPx(280, 'M'));
+    expect(deriveSubtitleFontPx(280, 'M')).toBeLessThan(deriveSubtitleFontPx(280, 'L'));
   });
 
   it('scales with the canvas width (preview == export proportion)', () => {
     // Arrange — 1080 export is the 280 preview scaled up; ratio must match
-    const preview = deriveSubtitleFontPx(280, 30, 'L');
-    const exported = deriveSubtitleFontPx(1080, 30, 'L');
+    const preview = deriveSubtitleFontPx(280, 'L');
+    const exported = deriveSubtitleFontPx(1080, 'L');
 
-    // Assert — same chars+size → font ∝ canvas width
+    // Assert
     expect(exported / preview).toBeCloseTo(1080 / 280, 1);
   });
+});
 
-  it('sizes charsPerScreen real chars to fit one line for the font it is given (lines stays a true cap)', () => {
-    // Arrange — derive against a font's actual advance, then render with the SAME advance
+describe('subtitleCharsPerLine (TASK_022 — chars/tela = line width, capped to fit)', () => {
+  it('returns the desired chars when they fit one line', () => {
+    // Arrange — small font, wide canvas → 20 chars fit
+    const fontPx = deriveSubtitleFontPx(280, 'S');
+
+    // Act
+    const perLine = subtitleCharsPerLine(20, 280, fontPx, 0.5);
+
+    // Assert
+    expect(perLine).toBe(20);
+  });
+
+  it('caps charsPerScreen to what fits at the (size-driven) font + wide font', () => {
+    // Arrange — big font + widest advance → far fewer than 60 fit
+    const fontPx = deriveSubtitleFontPx(280, 'L');
+
+    // Act — ask for 60; only the fitting count comes back
+    const perLine = subtitleCharsPerLine(60, 280, fontPx, 0.58);
+
+    // Assert — capped below the requested 60, and a positive count
+    expect(perLine).toBeLessThan(60);
+    expect(perLine).toBeGreaterThanOrEqual(1);
+  });
+
+  it('keeps a perLine-char line within the wrap width (lines stays a true cap)', () => {
+    // Arrange
     const canvas = 280;
-    const chars = 30;
     const wrap = canvas * SUBTITLE_LINE_MAX_FRACTION;
     for (const advance of [0.345, 0.5, 0.58]) {
-      const fontPx = deriveSubtitleFontPx(canvas, chars, 'L', advance);
+      const fontPx = deriveSubtitleFontPx(canvas, 'L');
+      const perLine = subtitleCharsPerLine(40, canvas, fontPx, advance);
 
-      // Act — real line width of charsPerScreen chars in that font
-      const lineWidth = chars * advance * fontPx;
+      // Act — real width of perLine chars
+      const lineWidth = perLine * advance * fontPx;
 
-      // Assert — fills ≤ the wrap width (so a charsPerScreen-char line never wraps)
+      // Assert — fits the wrap (so a perLine-char line never wraps)
       expect(lineWidth).toBeLessThanOrEqual(wrap + 0.5);
     }
   });
 
-  it('falls back to a sane advance when none/zero is given (jsdom)', () => {
-    // Act + Assert — no divide-by-zero, finite px
-    expect(Number.isFinite(deriveSubtitleFontPx(280, 30, 'L', 0))).toBe(true);
-    expect(deriveSubtitleFontPx(280, 30, 'L')).toBeGreaterThan(0);
-  });
-
-  it('guards charsPerScreen = 0 (no divide-by-zero)', () => {
-    // Act + Assert
-    expect(Number.isFinite(deriveSubtitleFontPx(280, 0, 'M'))).toBe(true);
+  it('guards charsPerScreen = 0 / missing advance (no divide-by-zero, ≥ 1)', () => {
+    const fontPx = deriveSubtitleFontPx(280, 'M');
+    expect(subtitleCharsPerLine(0, 280, fontPx)).toBeGreaterThanOrEqual(1);
+    expect(Number.isFinite(subtitleCharsPerLine(30, 280, fontPx, 0))).toBe(true);
   });
 });
 
