@@ -5,6 +5,13 @@ import '@testing-library/jest-dom/vitest';
 // the reactive-pause effect calls pause() on mount, so provide silent default
 // stubs here. Tests that assert on play/pause override these in their own
 // beforeEach (e.g. with a vi.fn that dispatches media events).
+// jsdom has no Canvas 2D backend (logs "Not implemented: getContext"). The
+// subtitle font-size derivation probes it via measureCharAdvanceEm and falls
+// back gracefully; stub getContext → null so that probe is silent in tests.
+if (typeof window !== 'undefined' && window.HTMLCanvasElement) {
+  window.HTMLCanvasElement.prototype.getContext = () => null;
+}
+
 if (typeof window !== 'undefined' && window.HTMLMediaElement) {
   window.HTMLMediaElement.prototype.play = function play() {
     return Promise.resolve();
