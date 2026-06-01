@@ -5,14 +5,20 @@ import {
   parseColdOpenRange,
   buildPlaybackSegments,
 } from '@gospelviral/shared';
-import { timestampToSeconds, selectVisibleChunk } from '../lib/helpers.js';
+import {
+  timestampToSeconds,
+  selectVisibleChunk,
+  deriveSubtitleFontPx,
+  subtitleCharsPerLine,
+  measureCharAdvanceEm,
+  SUBTITLE_LINE_MAX_FRACTION,
+} from '../lib/helpers.js';
 import { cueAt } from '../lib/cueAt.js';
 import { highlightText } from '../lib/text-highlight.js';
 import { useCanvasMeasurement } from '../hooks/useCanvasMeasurement.js';
 import { useVideoPlayback } from '../hooks/useVideoPlayback.js';
 import { usePointerDrag } from '../hooks/usePointerDrag.js';
 
-const SIZE_MAP = { S: '14px', M: '17px', L: '21px' };
 const HIGHLIGHT_COLOR = '#F4C04A';
 
 function resolveBackgroundColor(background, bgColor) {
@@ -21,12 +27,15 @@ function resolveBackgroundColor(background, bgColor) {
   return 'transparent';
 }
 
-function buildTextStyle(config) {
+function buildTextStyle(config, fontPx) {
   const hasFill = config.background === 'translucent' || config.background === 'solid';
   return {
     fontFamily: `'${config.font}', sans-serif`,
     color: config.textColor,
-    fontSize: SIZE_MAP[config.size],
+    // Font size comes ONLY from `size` (scaled to the canvas) — the chars/tela
+    // slider never changes it (TASK_022). It scales identically for the preview
+    // and the 1080 export (preview == export).
+    fontSize: `${fontPx}px`,
     fontWeight: 700,
     lineHeight: 1.25,
     textAlign: 'center',
@@ -39,11 +48,11 @@ function buildTextStyle(config) {
     backgroundColor: resolveBackgroundColor(config.background, config.bgColor),
     borderRadius: hasFill ? '4px' : '0',
     display: 'inline-block',
-    // `lines` is a HARD visual cap (D3, decision #7): the chunk holds
-    // charsPerScreen×lines chars and the width is bounded to ~charsPerScreen
-    // `ch`, so the text wraps to roughly `lines` rows. `min(92%, …)` keeps it
-    // inside the 9:16 canvas on narrow screens.
-    maxWidth: `min(92%, ${config.charsPerScreen}ch)`,
+    // The span fills the SubtitleLayer wrap box (whose width is the real wrap
+    // px). `lines` is a TRUE cap: the derived font sizes charsPerScreen chars
+    // to fill < that box, so a charsPerScreen-char line never wraps and a
+    // charsPerScreen×lines chunk occupies at most `lines` rows.
+    maxWidth: '100%',
   };
 }
 
@@ -119,6 +128,7 @@ function SubtitleLayer({
   anchorPercent,
   sxPreview,
   syPreview,
+  lineWidthPx,
   dragHandlers,
   draggable,
 }) {
@@ -129,7 +139,12 @@ function SubtitleLayer({
         top: `calc(${anchorPercent}% + ${syPreview}px)`,
         left: `calc(50% + ${sxPreview}px)`,
         transform: 'translate(-50%, -50%)',
-        maxWidth: '92%',
+        // Explicit wrap width (TASK_022). An absolute, left:50% box otherwise
+        // shrink-to-fits to the space right of its left edge (~50% of the
+        // canvas), so the subtitle wrapped at half width regardless of font or
+        // maxWidth. A fixed width = the real wrap px lets a charsPerScreen line
+        // use the full intended width.
+        width: `${lineWidthPx}px`,
         padding: '4px',
         cursor: draggable ? 'move' : 'default',
         touchAction: 'none',
@@ -215,7 +230,7 @@ export default function SubtitlePreview({
   const config = subtitleConfig;
   const startSec = timestampToSeconds(moment.timestamp_start);
   const endSec = timestampToSeconds(moment.timestamp_end);
-  const { canvasRef, scaleFactor } = useCanvasMeasurement();
+  const { canvasRef, canvasSize, scaleFactor } = useCanvasMeasurement();
 
   // Playback segments (D6): an apply_cold_open moment plays [peak, fullCut] so
   // the peak teaser replays in context; otherwise the single full cut (= pre-D6
@@ -250,14 +265,29 @@ export default function SubtitlePreview({
   // panel is the SSOT for on-screen text shape; preview == export), and the
   // visible chunk advances with currentTime inside the cue window. Edit mode
   // pins chunk[0] (clock = window start). Highlight runs on the VISIBLE chunk.
+  // Subtitle sizing (TASK_022): the font comes ONLY from `size`; `chars/tela`
+  // sets the effective chars-per-line (line WIDTH), capped to what fits the
+  // size-driven font on the canvas, so `lines` stays a true visual cap and the
+  // slider never changes the font. The chunk is split by that effective perLine.
+  const advanceEm = useMemo(() => measureCharAdvanceEm(config.font), [config.font]);
+  const fontPx = deriveSubtitleFontPx(canvasSize.width, config.size);
+  const perLine = subtitleCharsPerLine(config.charsPerScreen, canvasSize.width, fontPx, advanceEm);
+  const lineWidthPx = Math.min(
+    Math.round(canvasSize.width * SUBTITLE_LINE_MAX_FRACTION),
+    Math.ceil(perLine * advanceEm * fontPx) + 6,
+  );
+
   const cue = cueAt(cues, currentTime);
   const sourceText = cue?.text ?? moment.key_quote ?? moment.hook_title ?? '';
   const cueWindow = cue ? { start: cue.start, end: cue.end } : { start: startSec, end: endSec };
   const clock = editable ? cueWindow.start : currentTime;
-  const subtitleText = selectVisibleChunk(sourceText, clock, cueWindow, config);
+  const subtitleText = selectVisibleChunk(sourceText, clock, cueWindow, {
+    charsPerScreen: perLine,
+    lines: config.lines,
+  });
   const highlighted = highlightText(subtitleText, config);
   const anchorPercent = SUBTITLE_ANCHOR_PERCENT[config.position] ?? SUBTITLE_ANCHOR_PERCENT.bottom;
-  const textStyle = buildTextStyle(config);
+  const textStyle = buildTextStyle(config, fontPx);
 
   // Drag is gated to EDIÇÃO mode: in PLAYER mode onCommit is undefined, so
   // usePointerDrag's pointerdown short-circuits and the layers are static.
@@ -316,6 +346,7 @@ export default function SubtitlePreview({
         anchorPercent={anchorPercent}
         sxPreview={sxPreview}
         syPreview={syPreview}
+        lineWidthPx={lineWidthPx}
         dragHandlers={subtitleDragHandlers}
         draggable={editable && Boolean(onSubtitleConfigChange)}
       />
