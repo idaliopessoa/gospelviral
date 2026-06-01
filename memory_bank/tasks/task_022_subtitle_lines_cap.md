@@ -1,7 +1,7 @@
 # TASK_022: Subtitle size model — `lines` a true visual cap (orthogonal knobs: size→font, chars/tela→width, lines→cap)
 timestamp: 2026-05-30T00:00:00Z
 version: 1.1
-status: Active — implemented + MCP-verified; PR #11 open (awaiting merge)
+status: Complete (merged via PR #11 on 2026-06-01)
 owner: unassigned
 confidence: HIGH (root cause reproduced in-browser; orthogonal-knobs fix verified)
 

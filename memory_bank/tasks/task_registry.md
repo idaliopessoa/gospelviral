@@ -240,6 +240,17 @@ Architectural decisions promised by tasks land in `memory_bank/decisions/DEC_XXX
 - **Depends on**: TASK_019 (overlay/video preview)
 - **smoke:heap**: N/A (web-only — no upload-route/video-storage/multipart file)
 
+### TASK_022: Subtitle LINHAS as a true visual cap (orthogonal size/chars/lines)
+- **Status**: Complete (merged via PR #11 on 2026-06-01)
+- **Interface**: INPUT[`SubtitlePreview.jsx` (fixed font px + min(92%,Nch) + left:50% shrink-to-fit), `useCanvasMeasurement` canvasSize, helpers chunk] → OUTPUT[`deriveSubtitleFontPx(canvas,size)` (font from size only) + `subtitleCharsPerLine` (chars/tela=line width capped to fit) + `measureCharAdvanceEm` + explicit SubtitleLayer wrap width]
+- **Confidence**: HIGH (root cause reproduced in-browser; orthogonal-knobs fix MCP-verified)
+- **Black Box**: `LINHAS=N` → at most N visual lines; the chars/tela slider sets line WIDTH (not font); `size` (S/M/L) is the only font-size control; font scales with canvas → preview == 1080 export. Fixes LINHAS=1-renders-2-lines + chars/tela wrongly changing the font.
+- **Phase**: 5 (UX follow-up)
+- **Prerequisites**: ✅ P1+P2+P3 included
+- **File**: task_022_subtitle_lines_cap.md
+- **Depends on**: TASK_019 (D3 chunking)
+- **smoke:heap**: N/A (web-only)
+
 ## Task Creation Log
 2026-05-27 TASK_001..TASK_012 created — Pass 1 high-level plan, awaiting human review before Pass 2 decomposition per task.
 2026-05-27 Registry refined: DEC folder convention recorded; TASK_007 dependency widened to include TASK_006; TASK_001 GitFlow special-cased for `main`→`develop` bootstrap; TASK_004 visual-parity gate clarified as human-only (Playwright snapshot deferred); TASK_011 schema-versioning + migration-safety invariants tightened; "viral-cristao-artifact.jsx byte-identical until TASK_012" invariant propagated to all tasks that read it.
