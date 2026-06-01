@@ -53,6 +53,70 @@ function clamp(n, lo, hi) {
   return n;
 }
 
+// Fraction of the line-wrap width that `charsPerScreen` characters fill, per
+// `size` (TASK_022). All ≤ 1 so a charsPerScreen-char line never reaches the
+// wrap → `lines` stays a true visual cap.
+const SUBTITLE_FILL = { S: 0.68, M: 0.8, L: 0.92 };
+// Fallback glyph advance (fraction of font-size) when the real font can't be
+// measured (jsdom). ~0.5 ≈ a typical proportional sans.
+const FALLBACK_CHAR_ADVANCE_EM = 0.5;
+/** The subtitle line wraps at this fraction of the canvas width (px). */
+export const SUBTITLE_LINE_MAX_FRACTION = 0.94;
+
+const _advanceCache = new Map();
+
+/**
+ * Average glyph advance of `fontFamily` as a fraction of font-size, measured
+ * with a Canvas 2D context (TASK_022). Memoized per font. Returns the fallback
+ * when canvas/text metrics are unavailable (jsdom / SSR), so the derivation
+ * still works in tests.
+ *
+ * @param {string} fontFamily
+ * @returns {number} advance per em (e.g. Bebas ≈ 0.35, Archivo Black ≈ 0.58)
+ */
+export function measureCharAdvanceEm(fontFamily) {
+  if (_advanceCache.has(fontFamily)) return _advanceCache.get(fontFamily);
+  let advance = FALLBACK_CHAR_ADVANCE_EM;
+  try {
+    const ctx = document.createElement('canvas').getContext('2d');
+    if (ctx && typeof ctx.measureText === 'function') {
+      const sample = 'Você colocou essa aliança no dedo da sua esposa querida';
+      ctx.font = `700 100px '${fontFamily}', sans-serif`;
+      const w = ctx.measureText(sample).width;
+      if (w > 0) advance = w / 100 / sample.length;
+    }
+  } catch {
+    advance = FALLBACK_CHAR_ADVANCE_EM;
+  }
+  _advanceCache.set(fontFamily, advance);
+  return advance;
+}
+
+/**
+ * Derive the subtitle font size (px) from the panel's `charsPerScreen`, the
+ * measured canvas width, and the FONT'S OWN average advance (TASK_022 — SSOT
+ * for subtitle size). Sizes so `charsPerScreen` real characters fill
+ * `SUBTITLE_FILL[size]` of the line-wrap width — for the actual font, so narrow
+ * (Bebas) and wide (Archivo) fonts fill the same fraction yet both stay within
+ * one line. More chars → smaller font; scales with the canvas width, so the
+ * 280-px preview and the 1080-px export share one proportion (preview ==
+ * export). `size` (S/M/L) sets how full the line is.
+ *
+ * @param {number} canvasWidthPx measured preview/canvas width in px
+ * @param {number} charsPerScreen target characters per line (panel slider)
+ * @param {'S'|'M'|'L'} size
+ * @param {number} [advanceEm] font advance per em (defaults to the fallback)
+ * @returns {number} font size in px (rounded to 0.1)
+ */
+export function deriveSubtitleFontPx(canvasWidthPx, charsPerScreen, size, advanceEm = FALLBACK_CHAR_ADVANCE_EM) {
+  const fill = SUBTITLE_FILL[size] ?? SUBTITLE_FILL.M;
+  const chars = charsPerScreen > 0 ? charsPerScreen : 1;
+  const adv = advanceEm > 0 ? advanceEm : FALLBACK_CHAR_ADVANCE_EM;
+  const wrapPx = canvasWidthPx * SUBTITLE_LINE_MAX_FRACTION;
+  const px = (wrapPx * fill) / (chars * adv);
+  return Math.round(px * 10) / 10;
+}
+
 /**
  * Pick the subtitle chunk visible at `currentTime` within a cue window (D3 —
  * panel as SSOT for on-screen text shape). The text is split with `chunkText`

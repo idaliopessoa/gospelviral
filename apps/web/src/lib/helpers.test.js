@@ -1,9 +1,13 @@
 import { describe, it, expect } from 'vitest';
+import { vi, afterEach } from 'vitest';
 import {
   extractVideoId,
   timestampToSeconds,
   chunkText,
   selectVisibleChunk,
+  deriveSubtitleFontPx,
+  measureCharAdvanceEm,
+  SUBTITLE_LINE_MAX_FRACTION,
 } from './helpers.js';
 
 describe('extractVideoId', () => {
@@ -182,5 +186,90 @@ describe('selectVisibleChunk (D3 — panel SSOT)', () => {
 
     // Assert
     expect(out).toBe(chunks[0]);
+  });
+});
+
+describe('deriveSubtitleFontPx (TASK_022 — chars-driven subtitle size)', () => {
+  it('shrinks the font as charsPerScreen grows (more chars per line)', () => {
+    // Act
+    const few = deriveSubtitleFontPx(280, 18, 'M');
+    const many = deriveSubtitleFontPx(280, 36, 'M');
+
+    // Assert
+    expect(few).toBeGreaterThan(many);
+  });
+
+  it('grows the font with size S < M < L for the same chars', () => {
+    // Act + Assert
+    const s = deriveSubtitleFontPx(280, 30, 'S');
+    const m = deriveSubtitleFontPx(280, 30, 'M');
+    const l = deriveSubtitleFontPx(280, 30, 'L');
+    expect(s).toBeLessThan(m);
+    expect(m).toBeLessThan(l);
+  });
+
+  it('scales with the canvas width (preview == export proportion)', () => {
+    // Arrange — 1080 export is the 280 preview scaled up; ratio must match
+    const preview = deriveSubtitleFontPx(280, 30, 'L');
+    const exported = deriveSubtitleFontPx(1080, 30, 'L');
+
+    // Assert — same chars+size → font ∝ canvas width
+    expect(exported / preview).toBeCloseTo(1080 / 280, 1);
+  });
+
+  it('sizes charsPerScreen real chars to fit one line for the font it is given (lines stays a true cap)', () => {
+    // Arrange — derive against a font's actual advance, then render with the SAME advance
+    const canvas = 280;
+    const chars = 30;
+    const wrap = canvas * SUBTITLE_LINE_MAX_FRACTION;
+    for (const advance of [0.345, 0.5, 0.58]) {
+      const fontPx = deriveSubtitleFontPx(canvas, chars, 'L', advance);
+
+      // Act — real line width of charsPerScreen chars in that font
+      const lineWidth = chars * advance * fontPx;
+
+      // Assert — fills ≤ the wrap width (so a charsPerScreen-char line never wraps)
+      expect(lineWidth).toBeLessThanOrEqual(wrap + 0.5);
+    }
+  });
+
+  it('falls back to a sane advance when none/zero is given (jsdom)', () => {
+    // Act + Assert — no divide-by-zero, finite px
+    expect(Number.isFinite(deriveSubtitleFontPx(280, 30, 'L', 0))).toBe(true);
+    expect(deriveSubtitleFontPx(280, 30, 'L')).toBeGreaterThan(0);
+  });
+
+  it('guards charsPerScreen = 0 (no divide-by-zero)', () => {
+    // Act + Assert
+    expect(Number.isFinite(deriveSubtitleFontPx(280, 0, 'M'))).toBe(true);
+  });
+});
+
+describe('measureCharAdvanceEm (TASK_022)', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it('returns the measured advance per em from a 2D context', () => {
+    // Arrange — stub a context whose measureText is 55% of font-size per char
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({
+      font: '',
+      measureText: (s) => ({ width: s.length * 55 }), // 100px font ⇒ 0.55/char
+    });
+
+    // Act — unique font name to dodge the module memo cache
+    const advance = measureCharAdvanceEm('TestFont-Wide-1');
+
+    // Assert
+    expect(advance).toBeCloseTo(0.55, 2);
+  });
+
+  it('falls back to ~0.5 when no 2D context is available', () => {
+    // Arrange — jsdom-style: getContext → null
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
+
+    // Act
+    const advance = measureCharAdvanceEm('TestFont-NoCanvas-2');
+
+    // Assert
+    expect(advance).toBeCloseTo(0.5, 2);
   });
 });
