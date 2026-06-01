@@ -16,12 +16,17 @@ Results = "Ver exemplo pronto", LEGENDA tab, font Bebas Neue, chars/tela 36.
 | 3 | 320 px | 24.4 px | **3** ✅ |
 
 `lines` is now a TRUE visual cap (1→1, 2→2, 3→3). The SubtitleLayer has an
-explicit wrap width (0.94 × canvas = 320 px, not 170), and the font is derived
-from `charsPerScreen` + canvas width + the FONT'S OWN measured advance
-(`measureCharAdvanceEm`), so a `charsPerScreen`-char line fills the wrap for any
-font (Bebas 0.35 … Archivo 0.58) yet always stays on one line. `chars/tela`
-controls density (more chars → smaller font); `size` (S/M/L) sets fill. Font
-scales with canvas width → preview == 1080 export by construction.
+explicit wrap width (0.94 × canvas = 320 px, not 170 — fixes the `left:50%`
+shrink-to-fit layout bug). The three knobs are ORTHOGONAL (final model):
+- **`size`** (S/M/L) → font size only, scaled to the canvas (→ preview == 1080
+  export). The font does NOT depend on `charsPerScreen`.
+- **`chars/tela`** → effective chars-per-line (line WIDTH), capped to what fits
+  the size-driven font (`measureCharAdvanceEm` measures the actual font advance).
+- **`lines`** → true visual cap (a `perLine×lines` chunk wraps to ≤ `lines` rows).
+
+(The font reads 24.4 px in the table above because that early capture used the
+first-pass chars-driven model; the shipped model is size-only — see the
+re-verified numbers below.)
 
 Screenshot: `lines1-single-line.png` (LINHAS=1, one line).
 
